@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Painel Atendente | Saúde+</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="assets/styles.css">
+<script defer src="assets/api.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html"><span class="brand-dot"></span>Saúde+
+    <span class="badge" style="margin-left:6px;background:var(--primary-100);color:var(--primary-600)">Atendente</span>
+  </a>
+  <nav class="nav">
+    <span id="userEmail" class="muted"></span>
+    <button class="btn btn-outline btn-sm" onclick="signOut()">Sair</button>
+  </nav>
+</header>
+
+<main class="container">
+  <h1 id="greetingTitle">Painel de atendimento</h1>
+  <p class="muted" id="greetingSub">Gerencie os agendamentos e acompanhe seus pacientes.</p>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-tab="fila" role="tab" aria-selected="true" id="tab-fila" aria-controls="fila">Fila do dia <span id="queueBadge"></span></button>
+    <button class="tab" data-tab="consultas" role="tab" aria-selected="false" id="tab-consultas" aria-controls="consultas">Consultas</button>
+    <button class="tab" data-tab="exames" role="tab" aria-selected="false" id="tab-exames" aria-controls="exames">Exames</button>
+    <button class="tab" data-tab="pacientes" role="tab" aria-selected="false" id="tab-pacientes" aria-controls="pacientes">Buscar paciente</button>
+  </div>
+
+  <!-- Fila do dia (pendentes de hoje) -->
+  <section class="tabpanel active" id="fila" role="tabpanel" aria-labelledby="tab-fila">
+    <div class="grid grid-4" id="stats" style="margin-bottom:16px"></div>
+    <div class="card"><h3>Pendentes para hoje</h3><div id="todayQueue"><div class="spinner"></div></div></div>
+  </section>
+
+  <!-- Consultas recentes -->
+  <section class="tabpanel" id="consultas" role="tabpanel" aria-labelledby="tab-consultas">
+    <div class="card"><h3>Consultas recentes</h3><div id="allAppts"><div class="spinner"></div></div></div>
+  </section>
+
+  <!-- Exames recentes -->
+  <section class="tabpanel" id="exames" role="tabpanel" aria-labelledby="tab-exames">
+    <div class="card"><h3>Exames recentes</h3><div id="allExams"><div class="spinner"></div></div></div>
+  </section>
+
+  <!-- Buscar paciente -->
+  <section class="tabpanel" id="pacientes" role="tabpanel" aria-labelledby="tab-pacientes">
+    <div class="card">
+      <h3>Buscar paciente</h3>
+      <form id="patientSearchForm" class="row">
+        <input class="input" id="patientQuery" placeholder="Nome ou e-mail do paciente" style="flex:1;min-width:260px">
+        <button class="btn btn-primary" type="submit">Buscar</button>
+      </form>
+      <div id="patientResults" style="margin-top:16px"></div>
+    </div>
+    <div id="patientHistory" style="margin-top:16px"></div>
+  </section>
+</main>
+
+<script>
+let SESSION;
+let allAppointments = [];
+let allExams = [];
+let pendingReagendar = null;
+
+function formatJobRole(role) {
+  if (!role) return '';
+  const map = {
+    'recepcionista': 'Recepcionista',
+    'tecnico_enfermagem': 'Técnico(a) de Enfermagem',
+    'enfermeiro': 'Enfermeiro(a)',
+    'medico': 'Médico(a)',
+    'agente_saude': 'Agente Comunitário de Saúde',
+    'atendente': 'Atendente'
+  };
+  const key = role.toLowerCase().trim();
+  if (map[key]) return map[key];
+  return role.charAt(0).toUpperCase() + role.slice(1);
+}
+
+/* ===== MODAL DE REAGENDAMENTO (4.1) ===== */
+function ensureReagendarModal() {
+  if (document.getElementById('reagendarModal')) return;
+  const style = document.createElement('style');
+  style.textContent = `#reagendarModal{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.45)}
+  #reagendarModal.show{display:flex}
+  #reagendarModal .reagendar-modal-card{width:min(400px,100%);background:var(--surface,#fff);border:1px solid var(--border,#ddd);border-radius:16px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.22)}
+  #reagendarModal h3{margin:0 0 10px}
+  #reagendarModal .reagendar-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}`;
+  document.head.appendChild(style);
+  
+  document.body.insertAdjacentHTML('beforeend', `
+    <div id="reagendarModal" role="dialog" aria-modal="true">
+      <div class="reagendar-modal-card">
+        <h3>Reagendar atendimento</h3>
+        <p class="muted" style="font-size:.9rem;margin-bottom:14px">Selecione a nova data e horário:</p>
+        <div class="field">
+          <label>Data/hora</label>
+          <input class="input" id="reagendarInputDate" type="datetime-local" required>
+        </div>
+        <div class="reagendar-modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeReagendarModal()">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="reagendarConfirmBtn" onclick="confirmReagendar()">Salvar</button>
+        </div>
+      </div>
+    </div>
+  `);
+}
+
+function nowLocalForInput() {
+  const d = new Date(); d.setSeconds(0, 0);
+  return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
+window.reagendar = function(kind, id) {
+  ensureReagendarModal();
+  pendingReagendar = { kind, id };
+  const input = document.getElementById('reagendarInputDate');
+  input.min = nowLocalForInput();
+  input.value = '';
+  document.getElementById('reagendarModal').classList.add('show');
+};
+
+function closeReagendarModal() {
+  const m = document.getElementById('reagendarModal');
+  if (m) m.classList.remove('show');
+  pendingReagendar = null;
+}
+
+async function confirmReagendar() {
+  if (!pendingReagendar) return;
+  const inputVal = document.getElementById('reagendarInputDate').value;
+  if (!inputVal) {
+    toast('Selecione uma data e hora válidas', 'error');
+    return;
+  }
+  
+  const formattedDate = inputVal.replace('T', ' ');
+  const btn = document.getElementById('reagendarConfirmBtn');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  try {
+    await apiPatch('/staff/' + pendingReagendar.kind + '/' + encodeURIComponent(pendingReagendar.id), { scheduled_at: formattedDate });
+    toast('Reagendado com sucesso', 'success');
+    closeReagendarModal();
+    loadAll();
+  } catch (err) {
+    toast(err.message || 'Erro ao reagendar', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Salvar';
+  }
+}
+
+window.addEventListener('load', async ()=>{
+  SESSION = await requireRole(['atendente', 'admin']);
+  if(!SESSION) return;
+
+  const name = SESSION.user.full_name || SESSION.user.email;
+  const formattedRole = formatJobRole(SESSION.user.job_role);
+  
+  document.getElementById('userEmail').textContent = SESSION.user.email;
+  document.getElementById('greetingTitle').textContent = 'Olá, ' + esc(name.split(' ')[0]) + '!';
+  document.getElementById('greetingSub').textContent =
+    (formattedRole ? formattedRole + ' · ' : '') + 'Painel de atendimento';
+
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click', ()=>switchTab(t.dataset.tab)));
+  document.getElementById('patientSearchForm').addEventListener('submit', searchPatient);
+
+  ensureReagendarModal();
+  loadAll();
+});
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>{
+    const active = t.dataset.tab===name;
+    t.classList.toggle('active', active);
+    t.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  document.querySelectorAll('.tabpanel').forEach(p=>p.classList.toggle('active', p.id===name));
+}
+
+async function loadAll(){
+  try{
+    const [A, E] = await Promise.all([
+      apiGet('/staff/appointments?limit=100'),
+      apiGet('/staff/exams?limit=100'),
+    ]);
+    allAppointments = A; allExams = E;
+
+    const today = new Date().toISOString().slice(0,10);
+    const todayA = A.filter(r=>r.scheduled_at.slice(0,10)===today && r.status==='pendente');
+    const todayE = E.filter(r=>r.scheduled_at.slice(0,10)===today && r.status==='pendente');
+    const todayTotal = todayA.length + todayE.length;
+
+    document.getElementById('queueBadge').innerHTML = todayTotal > 0
+      ? `<span class="badge badge-warning" style="margin-left:4px">${todayTotal}</span>` : '';
+
+    document.getElementById('stats').innerHTML =
+      stat('Pendentes hoje', todayTotal) +
+      stat('Consultas', A.length) +
+      stat('Exames', E.length);
+
+    const todayAll = [
+      ...todayA.map(r=>({...r,_kind:'appointments',_label:'Consulta'})),
+      ...todayE.map(r=>({...r,_kind:'exams',_label:'Exame'})),
+    ].sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at));
+
+    document.getElementById('todayQueue').innerHTML = todayAll.length
+      ? todayAll.map(r=>itemRow(r, r._kind, r._label)).join('')
+      : '<div class="empty">Nenhum pendente para hoje.</div>';
+
+    document.getElementById('allAppts').innerHTML = A.length
+      ? A.map(r=>itemRow(r,'appointments','Consulta')).join('')
+      : '<div class="empty">Sem consultas.</div>';
+    document.getElementById('allExams').innerHTML = E.length
+      ? E.map(r=>itemRow(r,'exams','Exame')).join('')
+      : '<div class="empty">Sem exames.</div>';
+  }catch(err){
+    toast(err.message || 'Erro ao carregar dados', 'error');
+  }
+}
+
+function itemRow(r, kind, label){
+  const title = kind==='appointments'
+    ? `${esc(r.specialty||'—')} ${r.doctor?'<span class="muted">com '+esc(r.doctor)+'</span>':''}`
+    : esc(r.exam_type||'—');
+
+  const canAct = r.status==='pendente' || r.status==='confirmado';
+  const actions = canAct ? `
+    <div class="row">
+      <button class="btn btn-outline btn-sm" style="color:var(--success);border-color:var(--success)"
+        onclick="act('${kind}','${r.id}','confirmado')">Confirmar</button>
+      <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)"
+        onclick="act('${kind}','${r.id}','cancelado')">Cancelar</button>
+      <button class="btn btn-outline btn-sm" onclick="reagendar('${kind}','${r.id}')">Reagendar</button>
+    </div>` : '';
+
+  return `<div class="item">
+    <div>
+      <h4><span class="badge" style="margin-right:6px">${label}</span>${title}</h4>
+      <p>${esc(r.location||r.reason||'')} · <span class="badge ${statusClass(r.status)}">${esc(r.status)}</span>
+         · <span class="muted">${esc(r.user_name||'')}</span>
+      </p>
+    </div>
+    <div style="text-align:right">
+      <div class="muted" style="font-size:.85rem;margin-bottom:6px">${fmtDate(r.scheduled_at)}</div>
+      ${actions}
+    </div>
+  </div>`;
+}
+
+window.act = async function(kind, id, status){
+  try{
+    await apiPatch('/staff/'+kind+'/'+encodeURIComponent(id), { status });
+    toast('Atualizado','success');
+    loadAll();
+  }catch(err){ toast(err.message||'Erro','error'); }
+};
+
+/* ===== BUSCAR PACIENTE COM AVISO DE INATIVO (4.2) ===== */
+async function searchPatient(e){
+  e.preventDefault();
+  const q = document.getElementById('patientQuery').value.trim();
+  if(!q) return;
+  const box = document.getElementById('patientResults');
+  box.innerHTML = '<div class="spinner"></div>';
+  document.getElementById('patientHistory').innerHTML = '';
+  try{
+    const patients = await apiGet('/staff/patients?q='+encodeURIComponent(q));
+    if(!patients.length){ box.innerHTML='<div class="empty">Nenhum paciente encontrado.</div>'; return; }
+    
+    box.innerHTML = patients.map(p => {
+      const status = p.account_status || 'ativo';
+      if (status === 'inativo' || status === 'pendente') {
+        const labelStatus = status === 'inativo' ? 'Inativa' : 'Pendente de ativação';
+        return `
+          <div class="item" style="border-left: 4px solid var(--warning, #e6a23c); background: rgba(230,162,60,0.05);">
+            <div>
+              <h4>${esc(p.full_name || 'Paciente cadastrado')} <span class="badge badge-warning">Conta ${labelStatus}</span></h4>
+              <p class="muted">Este paciente possui um cadastro existente no sistema, mas sua conta está atualmente <strong>${status}</strong>. Entre em contato com a administração para reativação.</p>
+            </div>
+          </div>`;
+      }
+
+      return `
+        <div class="item">
+          <div>
+            <h4>${esc(p.full_name)}</h4>
+            <p class="muted">${esc(p.email)} ${p.phone?'· '+esc(p.phone):''} ${p.birth_date?'· Nasc: '+fmtSimpleDate(p.birth_date):''}</p>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="viewPatient('${p.id}','${esc(p.full_name)}')">Ver histórico</button>
+        </div>`;
+    }).join('');
+  }catch(err){ box.innerHTML=`<div class="empty">${esc(err.message)}</div>`; }
+}
+
+window.viewPatient = async function(id, name){
+  const box = document.getElementById('patientHistory');
+  box.innerHTML = '<div class="spinner"></div>';
+  try{
+    const data = await apiGet('/staff/patients/'+encodeURIComponent(id)+'/history');
+    const u = data.user;
+    box.innerHTML = `
+      <div class="card">
+        <div class="row between" style="margin-bottom:12px">
+          <h3 style="margin:0">${esc(u.full_name)}</h3>
+          <span class="muted">${data.appointments.length} consultas · ${data.exams.length} exames</span>
+        </div>
+        ${u.birth_date ? `<p class="muted" style="margin:0 0 4px">Nasc: ${fmtSimpleDate(u.birth_date)} · ${esc(u.gender||'—')} · Tipo sanguíneo: ${esc(u.blood_type||'—')}</p>` : ''}
+        ${u.mobile ? `<p class="muted" style="margin:0 0 16px">📱 ${esc(u.mobile)}</p>` : ''}
+        <h4>Consultas</h4>
+        ${renderHistory(data.appointments, ['scheduled_at','specialty','doctor','location','status'])}
+        <h4 style="margin-top:16px">Exames</h4>
+        ${renderHistory(data.exams, ['scheduled_at','exam_type','location','status'])}
+      </div>`;
+  }catch(err){ box.innerHTML=`<div class="empty">${esc(err.message)}</div>`; }
+};
+
+const COL_LABELS = {
+  scheduled_at:'Data/hora', specialty:'Especialidade', doctor:'Médico',
+  location:'Local', status:'Status',
+  exam_type:'Exame'
+};
+function renderHistory(rows, cols){
+  if(!rows.length) return '<div class="empty">Sem registros.</div>';
+  return `<table><thead><tr>${cols.map(c=>`<th>${COL_LABELS[c]||c}</th>`).join('')}</tr></thead><tbody>
+    ${rows.map(r=>`<tr>${cols.map(c=>`<td>${c==='scheduled_at'?fmtDate(r[c]):(c==='status'?`<span class="badge ${statusClass(r[c])}">${esc(r[c])}</span>`:esc(r[c]??'—'))}</td>`).join('')}</tr>`).join('')}
+  </tbody></table>`;
+}
+
+function fmtSimpleDate(d){
+  if(!d) return '—';
+  return new Date(d).toLocaleDateString('pt-BR');
+}
+function statusClass(s){
+  return s==='cancelado'?'badge-danger':s==='concluido'?'badge-success':s==='pendente'?'badge-warning':'';
+}
+function stat(label, value){
+  return `<div class="card"><p class="muted" style="margin:0;font-size:.8rem;text-transform:uppercase">${label}</p><h2 style="margin:.2em 0 0;font-size:2rem">${value}</h2></div>`;
+}
+function esc(s){ return (s??'').toString().replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+document.querySelectorAll('.tabs').forEach(tabContainer => {
+  const tabs = Array.from(tabContainer.querySelectorAll('.tab'));
+  
+  tabs.forEach((tab, index) => {
+    tab.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        let newIndex = e.key === 'ArrowRight' ? index + 1 : index - 1;
+        
+        if (newIndex >= tabs.length) newIndex = 0;
+        if (newIndex < 0) newIndex = tabs.length - 1;
+        
+        tabs[newIndex].focus();
+        tabs[newIndex].click();
+      }
+    });
+  });
+});
+
+function setDateLimits() {
+  const now = new Date();
+  const minDateTime = nowLocalForInput();
+  
+  const maxDateObj = new Date();
+  maxDateObj.setFullYear(now.getFullYear() + 1);
+  const maxDateTime = new Date(maxDateObj - maxDateObj.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+  document.querySelectorAll('input[type="datetime-local"]').forEach(el => {
+    el.min = minDateTime;
+    el.max = maxDateTime;
+  });
+}
+
+</script>
+</body>
+</html>

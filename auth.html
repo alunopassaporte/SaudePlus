@@ -1,0 +1,387 @@
+<!-- Arquivo recebido. A reconstrução completa excede o limite desta sessão. -->
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Entrar | Saúde+</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="assets/styles.css">
+<script defer src="assets/api.js"></script>
+<style>
+.wizard-steps{ display:flex; gap:0; margin-bottom:28px; counter-reset:step; }
+.wizard-step{ flex:1; text-align:center; font-size:.75rem; font-weight:700; color:var(--muted); position:relative; padding-top:36px; }
+.wizard-step::before{ counter-increment:step; content:counter(step); position:absolute; top:0; left:50%; transform:translateX(-50%); width:28px; height:28px; border-radius:50%; line-height:28px; background:var(--border); color:var(--muted); font-weight:800; font-size:.8rem; }
+.wizard-step::after{ content:""; position:absolute; top:14px; left:calc(50% + 14px); right:calc(-50% + 14px); height:2px; background:var(--border); }
+.wizard-step:last-child::after{ display:none; }
+.wizard-step.active::before{ background:var(--primary); color:#fff; }
+.wizard-step.done::before{ background:var(--success); color:#fff; content:"✓"; }
+.wizard-step.done::after{ background:var(--success); }
+.role-cards{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.role-card{ border:2px solid var(--border); border-radius:var(--radius); padding:18px 14px; text-align:center; cursor:pointer; transition:border-color .15s, background .15s; }
+.role-card:hover{ border-color:var(--primary); }
+.role-card.selected{ border-color:var(--primary); background:var(--primary-100); }
+.role-card svg{ width:36px; height:36px; color:var(--primary-600); margin-bottom:8px; }
+.role-card h4{ margin:0 0 4px; font-size:.95rem; }
+.role-card p{ margin:0; color:var(--muted); font-size:.8rem; }
+.auth-card .grid-2{ grid-template-columns:1fr 1fr; }
+@media(max-width:480px){ .auth-card .grid-2{ grid-template-columns:1fr; } }
+.opt{ font-size:.75rem; color:var(--muted); font-weight:400; margin-left:4px; }
+</style>
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="card auth-card" style="max-width:500px">
+    <a class="brand" href="index.html" style="margin-bottom:18px"><span class="brand-dot"></span>Saúde+</a>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="login">Entrar</button>
+      <button class="tab" data-tab="signup">Criar conta</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div class="tabpanel active" id="login">
+      <form id="loginForm">
+        <div class="field"><label>E-mail</label><input class="input" type="email" name="email" required autocomplete="email"></div>
+        <div class="field"><label>Senha</label><input class="input" type="password" name="password" required minlength="6" autocomplete="current-password"></div>
+        <button class="btn btn-primary" style="width:100%" type="submit">Entrar</button>
+      </form>
+    </div>
+
+    <!-- WIZARD -->
+    <div class="tabpanel" id="signup">
+      <div class="wizard-steps" id="wizardSteps">
+        <div class="wizard-step active" id="ws1">Tipo</div>
+        <div class="wizard-step" id="ws2">Dados</div>
+        <div class="wizard-step" id="ws3">Endereço</div>
+        <div class="wizard-step" id="ws4">Acesso</div>
+      </div>
+
+      <!-- PASSO 1 — Tipo de conta -->
+      <div id="step1">
+        <p class="muted" style="margin-bottom:16px">Como você vai usar o Saúde+?</p>
+        <div class="role-cards">
+          <div class="role-card selected" data-role="paciente" onclick="selectRole('paciente')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+            <h4>Paciente</h4>
+            <p>Quero agendar consultas e exames</p>
+          </div>
+          <div class="role-card" data-role="atendente" onclick="selectRole('atendente')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            <h4>Atendente</h4>
+            <p>Trabalho na rede de saúde</p>
+          </div>
+        </div>
+        <div class="field" id="jobRoleField" style="display:none;margin-top:16px">
+          <label>Cargo / Função</label>
+          <div class="field" id="jobRoleField" style="display:none;margin-top:16px">
+            <label>Cargo / Função *</label>
+        
+            <select class="select" id="jobRoleSelect" onchange="toggleOtherJobRole()">
+                <option value="">Selecione...</option>
+                <option>Recepcionista</option>
+                <option>Enfermeiro(a)</option>
+                <option>Médico(a)</option>
+                <option>Auxiliar Administrativo</option>
+                <option value="Outro">Outro</option>
+            </select>
+        
+            <input
+                class="input"
+                id="jobRoleOther"
+                placeholder="Informe o cargo"
+                style="display:none;margin-top:10px">
+        </div>
+        </div>
+        <p id="atendenteNote" style="display:none;font-size:.82rem;color:var(--warning);margin-top:12px;background:var(--warning-bg);padding:10px 12px;border-radius:8px">
+          ⚠️ Contas de atendente ficam <strong>pendentes</strong> até ativação pelo administrador.
+        </p>
+        <button class="btn btn-primary" style="width:100%;margin-top:20px" onclick="goStep(2)">Continuar</button>
+      </div>
+
+      <!-- PASSO 2 — Dados pessoais -->
+      <div id="step2" style="display:none">
+        <div class="grid grid-2" style="gap:12px">
+          <div class="field" style="grid-column:1/-1">
+            <label>Nome completo *</label>
+            <input class="input" id="s2_full_name" required>
+          </div>
+          <div class="field">
+            <label>Data de nascimento *</label>
+            <input class="input" id="s2_birth_date" type="date" required>
+          </div>
+          <div class="field">
+            <label>Gênero *</label>
+            <select class="select" id="s2_gender" required>
+              <option value="">Selecione...</option>
+              <option value="masculino">Masculino</option>
+              <option value="feminino">Feminino</option>
+              <option value="outro">Outro</option>
+              <option value="prefiro_nao_informar">Prefiro não informar</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Tipo sanguíneo <span class="opt">(opcional)</span></label>
+            <select class="select" id="s2_blood_type">
+              <option value="">Não sei / Prefiro não informar</option>
+              <option>A+</option><option>A-</option>
+              <option>B+</option><option>B-</option>
+              <option>AB+</option><option>AB-</option>
+              <option>O+</option><option>O-</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>CPF *</label>
+            <input class="input" id="s2_cpf" placeholder="000.000.000-00" maxlength="14" required>
+          </div>
+          <div class="field">
+            <label>RG *</label>
+            <input class="input" id="s2_rg" placeholder="00.000.000-0" maxlength="12" required>
+          </div>
+          <div class="field">
+            <label>Nome da mãe *</label>
+            <input class="input" id="s2_mother_name" required>
+          </div>
+          <div class="field">
+            <label>Nome do pai <span class="opt">(opcional)</span></label>
+            <input class="input" id="s2_father_name">
+          </div>
+          <div class="field">
+            <label>Celular *</label>
+            <input class="input" id="s2_mobile" placeholder="(00) 90000-0000" maxlength="16" required>
+          </div>
+          <div class="field">
+            <label>Telefone fixo <span class="opt">(opcional)</span></label>
+            <input class="input" id="s2_phone" placeholder="(00) 0000-0000" maxlength="15">
+          </div>
+        </div>
+        <div class="row" style="margin-top:16px">
+          <button class="btn btn-outline" onclick="goStep(1)">Voltar</button>
+          <button class="btn btn-primary" style="flex:1" onclick="validateStep2()">Continuar</button>
+        </div>
+      </div>
+
+      <!-- PASSO 3 — Endereço -->
+      <div id="step3" style="display:none">
+        <div class="grid grid-2" style="gap:12px">
+          <div class="field">
+            <label>CEP *</label>
+            <input class="input" id="s3_cep" placeholder="00000-000" maxlength="9" required oninput="maskCep(this)" onblur="lookupCep()">
+          </div>
+          <div class="field">
+            <label>Número *</label>
+            <input class="input" id="s3_number" placeholder="413" required>
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label>Rua / Logradouro *</label>
+            <input class="input" id="s3_street" placeholder="Preenchido pelo CEP (editável)" required>
+          </div>
+          <div class="field">
+            <label>Bairro *</label>
+            <input class="input" id="s3_neighborhood" placeholder="Preenchido pelo CEP" required>
+          </div>
+          <div class="field">
+            <label>Cidade *</label>
+            <input class="input" id="s3_city" placeholder="Preenchida pelo CEP" required>
+          </div>
+          <div class="field" style="flex:0 0 80px">
+            <label>UF *</label>
+            <input class="input" id="s3_state" maxlength="2" placeholder="UF" required>
+          </div>
+          <div class="field">
+            <label>Zona *</label>
+            <select class="select" id="s3_zone" required>
+              <option value="">Selecione...</option>
+              <option value="urbana">Urbana</option>
+              <option value="rural">Rural</option>
+            </select>
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label>Ponto de referência próximo à residência *</label>
+            <input class="input" id="s3_reference" placeholder="Ex: Próximo à Igreja São José, em frente ao mercadinho X..." required>
+          </div>
+        </div>
+        <p class="muted" style="font-size:.8rem;margin-top:8px">
+          O endereço é preenchido automaticamente pelo CEP — os campos são editáveis se precisar corrigir.
+        </p>
+        <div class="row" style="margin-top:16px">
+          <button class="btn btn-outline" onclick="goStep(2)">Voltar</button>
+          <button class="btn btn-primary" style="flex:1" onclick="validateStep3()">Continuar</button>
+        </div>
+      </div>
+
+      <!-- PASSO 4 — Credenciais -->
+      <div id="step4" style="display:none">
+        <div class="field">
+          <label>E-mail *</label>
+          <input class="input" id="s4_email" type="email" required autocomplete="email">
+        </div>
+        <div class="field">
+          <label>Senha * <span class="opt">— mínimo 6 caracteres</span></label>
+          <input class="input" id="s4_password" type="password" required minlength="6" autocomplete="new-password">
+        </div>
+        <div class="field">
+          <label>Confirmar senha *</label>
+          <input class="input" id="s4_confirm" type="password" required minlength="6" autocomplete="new-password">
+        </div>
+        <div class="row" style="margin-top:16px">
+          <button class="btn btn-outline" onclick="goStep(3)">Voltar</button>
+          <button class="btn btn-primary" style="flex:1" id="submitBtn" onclick="submitSignup()">Criar conta</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="muted" style="font-size:.8rem;margin-top:14px;text-align:center">
+      Campos marcados com * são obrigatórios.
+    </p>
+  </div>
+</div>
+
+<script>
+let selectedRole = 'paciente';
+
+window.addEventListener('load', ()=>{
+  const params = new URLSearchParams(location.search);
+  if(params.get('tab')==='signup') switchTab('signup');
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>switchTab(t.dataset.tab)));
+  document.getElementById('loginForm').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const f = new FormData(e.target);
+    try{
+      const data = await authLogin(f.get('email'), f.get('password'));
+      const role = data.user && data.user.role;
+      if(role==='admin')     location.href = 'admin.html';
+      else if(role==='atendente') location.href = 'atendente.html';
+      else                   location.href = 'dashboard.html';
+    }catch(err){ toast(err.message||'Erro ao entrar','error'); }
+  });
+  document.getElementById('s2_cpf').addEventListener('input',   e=>maskCpf(e.target));
+  document.getElementById('s2_mobile').addEventListener('input', e=>maskPhone(e.target,true));
+  document.getElementById('s2_phone').addEventListener('input',  e=>maskPhone(e.target,false));
+});
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
+  document.querySelectorAll('.tabpanel').forEach(p=>p.classList.toggle('active',p.id===name));
+}
+function selectRole(role){
+  selectedRole = role;
+  document.querySelectorAll('.role-card').forEach(c=>c.classList.toggle('selected',c.dataset.role===role));
+  const isAtend = role==='atendente';
+  document.getElementById('jobRoleField').style.display  = isAtend?'flex':'none';
+  document.getElementById('atendenteNote').style.display = isAtend?'block':'none';
+}
+function goStep(n){
+  for(let i=1;i<=4;i++){
+    document.getElementById('step'+i).style.display = i===n?'block':'none';
+    const ws = document.getElementById('ws'+i);
+    ws.classList.remove('active','done');
+    if(i<n) ws.classList.add('done');
+    else if(i===n) ws.classList.add('active');
+  }
+}
+function validateStep2(){
+  const required = ['s2_full_name','s2_birth_date','s2_gender','s2_cpf','s2_rg','s2_mother_name','s2_mobile'];
+  for(const id of required){
+    if(!document.getElementById(id).value.trim()){
+      toast('Preencha todos os campos obrigatórios (*)','error');
+      document.getElementById(id).focus();
+      return;
+    }
+  }
+  goStep(3);
+}
+function validateStep3(){
+  const required = ['s3_cep','s3_number','s3_street','s3_neighborhood','s3_city','s3_state','s3_zone','s3_reference'];
+  for(const id of required){
+    if(!document.getElementById(id).value.trim()){
+      toast('Preencha todos os campos obrigatórios, incluindo zona e ponto de referência.','error');
+      document.getElementById(id).focus();
+      return;
+    }
+  }
+  goStep(4);
+}
+
+// ViaCEP
+function maskCep(el){ let v=el.value.replace(/\D/g,'').slice(0,8); if(v.length>5) v=v.slice(0,5)+'-'+v.slice(5); el.value=v; }
+async function lookupCep(){
+  const cep = document.getElementById('s3_cep').value.replace(/\D/g,'');
+  if(cep.length!==8) return;
+  try{
+    const r = await fetch('https://viacep.com.br/ws/'+cep+'/json/');
+    const d = await r.json();
+    if(d.erro){ toast('CEP não encontrado.','error'); return; }
+    document.getElementById('s3_street').value       = d.logradouro||'';
+    document.getElementById('s3_neighborhood').value = d.bairro||'';
+    document.getElementById('s3_city').value         = d.localidade||'';
+    document.getElementById('s3_state').value        = d.uf||'';
+  }catch(e){ /* sem internet — usuário preenche manualmente */ }
+}
+
+function toggleOtherJobRole(){
+    document.getElementById("jobRoleOther").style.display =
+        document.getElementById("jobRoleSelect").value==="Outro"
+        ? "block"
+        : "none";
+}
+
+// Máscaras
+function maskCpf(el){ let v=el.value.replace(/\D/g,'').slice(0,11); v=v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2'); el.value=v; }
+function maskPhone(el,mob){ let v=el.value.replace(/\D/g,'').slice(0,mob?11:10); if(mob) v=v.replace(/^(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2'); else v=v.replace(/^(\d{2})(\d)/,'($1) $2').replace(/(\d{4})(\d)/,'$1-$2'); el.value=v; }
+
+async function submitSignup(){
+  const email    = document.getElementById('s4_email').value.trim();
+  const password = document.getElementById('s4_password').value;
+  const confirm  = document.getElementById('s4_confirm').value;
+  if(!email)              { toast('Informe o e-mail.','error'); return; }
+  if(password.length < 6) { toast('A senha precisa ter ao menos 6 caracteres.','error'); return; }
+  if(password !== confirm){ toast('As senhas não coincidem.','error'); return; }
+
+  const btn = document.getElementById('submitBtn');
+  btn.textContent='Criando...'; btn.disabled=true;
+
+  const payload = {
+    role: selectedRole, email, password,
+    full_name:    document.getElementById('s2_full_name').value.trim(),
+    birth_date:   document.getElementById('s2_birth_date').value||null,
+    gender:       document.getElementById('s2_gender').value||null,
+    blood_type:   document.getElementById('s2_blood_type').value||null,
+    cpf:          document.getElementById('s2_cpf').value||null,
+    rg:           document.getElementById('s2_rg').value||null,
+    mother_name:  document.getElementById('s2_mother_name').value||null,
+    father_name:  document.getElementById('s2_father_name').value||null,
+    mobile:       document.getElementById('s2_mobile').value||null,
+    phone:        document.getElementById('s2_phone').value||null,
+    cep:          document.getElementById('s3_cep').value||null,
+    address_number: document.getElementById('s3_number').value||null,
+    street:       document.getElementById('s3_street').value||null,
+    neighborhood: document.getElementById('s3_neighborhood').value||null,
+    city:         document.getElementById('s3_city').value||null,
+    state:        document.getElementById('s3_state').value||null,
+    zone:         document.getElementById('s3_zone').value||null,
+    reference_point: document.getElementById('s3_reference').value||null,
+    job_role: selectedRole==='atendente'
+      ? (document.getElementById('jobRoleSelect').value==='Outro'
+          ? document.getElementById('jobRoleOther').value
+          : document.getElementById('jobRoleSelect').value)
+      : null,
+  };
+
+  try{
+    const res = await authSignup(payload);
+    const msg = res && res.message ? res.message : 'Conta criada! Você já pode entrar.';
+    toast(msg,'success');
+    goStep(1); selectRole('paciente'); switchTab('login');
+    document.getElementById('loginForm').email.value = email;
+  }catch(err){ toast(err.message||'Erro ao criar conta','error'); }
+  finally{ btn.textContent='Criar conta'; btn.disabled=false; }
+}
+</script>
+</body>
+</html>

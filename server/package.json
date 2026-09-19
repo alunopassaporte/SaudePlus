@@ -1,0 +1,29 @@
+{
+  "name": "saude-plus-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "API Node/Express + MySQL do Saúde+",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "seed:admin": "node scripts/seed-admin.js",
+    "migrate:supabase": "node scripts/migrate-supabase.js",
+    "migrate": "mysql --default-character-set=utf8mb4 -u %DB_USER% -p%DB_PASSWORD% %DB_NAME% < migration_001.sql",
+    "smoke-test": "node scripts/smoke-test.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

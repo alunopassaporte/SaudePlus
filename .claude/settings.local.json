@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "Bash(tasklist)",
+      "Bash(netstat -ano)",
+      "Bash(curl -s -i -X POST http://localhost:4000/auth/signup -H 'Content-Type: application/json' -H 'Origin: http://localhost:3000' -d '{\"email\":\"teste-diag-1@example.com\",\"password\":\"123456\",\"full_name\":\"Teste Diag\",\"role\":\"paciente\"}' --max-time 10)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(curl -s -i -X OPTIONS http://localhost:4000/auth/signup -H 'Origin: http://127.0.0.1:5500' -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: content-type' --max-time 10)"
+    ]
+  }
+}

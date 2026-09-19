@@ -1,0 +1,767 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Painel ADM | Saúde+</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="assets/styles.css">
+  <script defer src="assets/api.js"></script>
+</head>
+
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html"><span class="brand-dot"></span>Saúde+ <span class="badge"
+        style="margin-left:6px">ADM</span></a>
+    <nav class="nav">
+      <span id="userEmail" class="muted"></span>
+      <button class="btn btn-outline btn-sm" onclick="signOut()">Sair</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <h1>Painel administrativo</h1>
+    <p class="muted">Monitore atendimentos, usuários e alertas de saúde.</p>
+
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="overview" role="tab" aria-selected="true" id="tab-overview"
+        aria-controls="overview">Visão geral</button>
+      <button class="tab" data-tab="usuarios" role="tab" aria-selected="false" id="tab-usuarios"
+        aria-controls="usuarios">Usuários e Histórico</button>
+      <button class="tab" data-tab="diseases" role="tab" aria-selected="false" id="tab-diseases"
+        aria-controls="diseases">Doenças</button>
+      <button class="tab" data-tab="units" role="tab" aria-selected="false" id="tab-units"
+        aria-controls="units">Unidades de Saúde</button>
+      <button class="tab" data-tab="auditoria" role="tab" aria-selected="false" id="tab-auditoria"
+        aria-controls="auditoria">Auditoria</button>
+    </div>
+
+    <!-- ===== VISÃO GERAL ===== -->
+    <section class="tabpanel active" id="overview" role="tabpanel" aria-labelledby="tab-overview">
+      <div class="grid grid-5" id="stats"></div>
+      <div class="row" style="justify-content:flex-end;margin-top:12px">
+        <button class="btn btn-outline btn-sm" type="button" onclick="downloadSummaryReport()">Baixar resumo
+          CSV</button>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h3>Consultas recentes</h3>
+        <div id="recentAppts">
+          <div class="spinner"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h3>Exames recentes</h3>
+        <div id="recentExams">
+          <div class="spinner"></div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ===== GESTÃO DE USUÁRIOS E HISTÓRICO ===== -->
+    <section class="tabpanel" id="usuarios" role="tabpanel" aria-labelledby="tab-usuarios">
+      <div class="card">
+        <h3>Gestão de usuários</h3>
+        <p class="muted" style="margin-top:-8px">Localize contas, revise pendências e abra o perfil ou o histórico de
+          atendimento.</p>
+        <form id="userSearchForm" class="row">
+          <input class="input" name="q" placeholder="Nome, e-mail ou telefone" style="flex:1;min-width:220px">
+          <select class="select" name="role" style="width:160px" aria-label="Filtrar por papel">
+            <option value="">Todos os papéis</option>
+            <option value="paciente">Paciente</option>
+            <option value="atendente">Atendente</option>
+            <option value="admin">Admin</option>
+          </select>
+          <select class="select" name="status" style="width:170px" aria-label="Filtrar por status">
+            <option value="">Todos os status</option>
+            <option value="pendente">Aguardando ativação</option>
+            <option value="ativo">Ativos</option>
+            <option value="inativo">Inativos</option>
+          </select>
+          <button class="btn btn-primary" type="submit">Buscar</button>
+        </form>
+        <div id="userSummary" class="muted" style="margin-top:14px;font-size:.88rem"></div>
+        <div id="userList" style="margin-top:18px"></div>
+      </div>
+      <div id="userEditBox" style="margin-top:16px;display:none"></div>
+      <div id="userHistoryBox" style="margin-top:16px;display:none"></div>
+    </section>
+
+    <!-- ===== DOENÇAS ===== -->
+    <section class="tabpanel" id="diseases" role="tabpanel" aria-labelledby="tab-diseases">
+      <div class="card">
+        <h3>Cadastrar doença / alerta</h3>
+        <form id="diseaseForm" class="grid grid-2">
+          <div class="field"><label>Nome</label><input class="input" name="name" required></div>
+          <div class="field">
+            <label>Região (Bairro)</label>
+            <select class="select" name="region" id="diseaseRegionSelect" required>
+              <option value="">Carregando regiões...</option>
+            </select>
+          </div>
+          <div class="field"><label>Nível</label>
+            <select class="select" name="alert_level">
+              <option value="baixo">Baixo</option>
+              <option value="medio">Médio</option>
+              <option value="alto">Alto</option>
+            </select>
+          </div>
+          <div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit"
+              style="width:100%">Adicionar</button></div>
+          <div class="field" style="grid-column:1/-1"><label>Descrição</label><textarea class="textarea"
+              name="description"></textarea></div>
+        </form>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h3>Doenças cadastradas</h3>
+        <div id="diseaseList">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== UNIDADES DE SAÚDE ===== -->
+    <section class="tabpanel" id="units" role="tabpanel" aria-labelledby="tab-units">
+      <div class="card">
+        <h3 id="unitFormTitle">Cadastrar unidade de saúde</h3>
+        <form id="unitForm" class="grid grid-2">
+          <div class="field">
+            <label for="unitName">Nome da unidade</label>
+            <input class="input" id="unitName" name="name" required>
+          </div>
+          <div class="field">
+            <label for="unitType">Tipo</label>
+            <select class="select" id="unitType" name="type" required>
+              <option value="ubs">UBS / PSF</option>
+              <option value="hospital">Hospital</option>
+              <option value="clinica">Clínica</option>
+              <option value="caps">CAPS</option>
+              <option value="outro">Outro</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="unitNeighborhood">Bairro ou região</label>
+            <input class="input" id="unitNeighborhood" name="neighborhood">
+          </div>
+          <div class="row" style="align-items:end;margin-bottom:14px">
+            <button class="btn btn-primary" type="submit" id="unitSubmit">Adicionar unidade</button>
+            <button class="btn btn-outline" type="button" id="unitCancel" style="display:none"
+              onclick="resetUnitForm()">Cancelar edição</button>
+          </div>
+        </form>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="row between">
+          <div>
+            <h3>Unidades cadastradas</h3>
+            <p class="muted" style="margin-top:-8px">Unidades inativas não aparecem nos formulários de agendamento.</p>
+          </div>
+          <button class="btn btn-outline btn-sm" type="button" onclick="loadUnits()">Atualizar</button>
+        </div>
+        <div id="unitList">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== AUDITORIA ===== -->
+    <section class="tabpanel" id="auditoria" role="tabpanel" aria-labelledby="tab-auditoria">
+      <div class="card">
+        <h3>Ações administrativas recentes</h3>
+        <p class="muted" style="margin-top:-8px">Quem fez o quê e quando — confirmações, cancelamentos e gestão de
+          alertas.</p>
+        <form id="auditFilterForm" class="row" style="margin-top:12px">
+          <input class="input" name="entityType" placeholder="Tipo da entidade" style="min-width:180px">
+          <input class="input" name="action" placeholder="Ação" style="min-width:180px">
+          <button class="btn btn-outline" type="submit">Filtrar</button>
+          <button class="btn btn-outline" type="button" onclick="resetAuditFilters()">Limpar</button>
+        </form>
+        <div id="auditLog" style="margin-top:12px">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    let SESSION;
+    let pendingReagendar = null;
+    let units = [];
+    let editingUnitId = null;
+    let diseases = [];
+    let editingDiseaseId = null;
+    let deletingDiseaseId = null;
+
+    window.addEventListener('load', async () => {
+      SESSION = await requireAuth();
+      if (!SESSION) return;
+      if (!(await isAdmin())) { toast('Acesso restrito ao admin', 'error'); location.replace('dashboard.html'); return; }
+      document.getElementById('userEmail').textContent = SESSION.user.email;
+
+      document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+      document.getElementById('diseaseForm').addEventListener('submit', addDisease);
+      document.getElementById('userSearchForm').addEventListener('submit', searchUsers);
+      document.getElementById('unitForm').addEventListener('submit', saveUnit);
+      document.getElementById('auditFilterForm').addEventListener('submit', loadAuditLog);
+
+      ensureReagendarModal();
+      ensureDeleteDiseaseModal();
+      setDateLimits();
+      loadHealthUnitsRegions();
+      loadUnits();
+      loadOverview();
+      loadDiseases();
+    });
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab').forEach(t => {
+        const a = t.dataset.tab === name;
+        t.classList.toggle('active', a);
+        t.setAttribute('aria-selected', a ? 'true' : 'false');
+      });
+      document.querySelectorAll('.tabpanel').forEach(p => p.classList.toggle('active', p.id === name));
+      if (name === 'auditoria') loadAuditLog();
+    }
+
+    async function loadHealthUnitsRegions() {
+      const sel = document.getElementById('diseaseRegionSelect');
+      if (!sel) return;
+      try {
+        const units = await apiGet('/health-units');
+        const rows = Array.isArray(units) ? units : [];
+        const neighborhoods = Array.from(new Set(rows.map(u => u.neighborhood).filter(Boolean))).sort();
+
+        if (!neighborhoods.length) {
+          sel.innerHTML = '<option value="">Nenhum bairro encontrado</option>';
+          return;
+        }
+        sel.innerHTML = '<option value="">Selecione a região/bairro...</option>' +
+          neighborhoods.map(b => `<option value="${esc(b)}">${esc(b)}</option>`).join('');
+      } catch (err) {
+        console.error(err);
+        sel.innerHTML = '<option value="">Erro ao carregar regiões</option>';
+      }
+    }
+
+    async function loadUnits() {
+      const box = document.getElementById('unitList');
+      if (!box) return;
+      box.innerHTML = '<div class="spinner"></div>';
+      try {
+        const data = await apiGet('/health-units/manage');
+        units = Array.isArray(data) ? data : [];
+        box.innerHTML = units.length ? units.map(unitRow).join('') : '<div class="empty">Nenhuma unidade cadastrada.</div>';
+      } catch (err) {
+        box.innerHTML = `<div class="empty">${esc(err.message || 'Erro ao carregar unidades')}</div>`;
+      }
+    }
+
+    function unitRow(unit) {
+      const typeLabels = { ubs: 'UBS / PSF', hospital: 'Hospital', clinica: 'Clínica', caps: 'CAPS', outro: 'Outro' };
+      const active = Number(unit.active) === 1;
+      return `<div class="item">
+        <div>
+          <h4>${esc(unit.name)} <span class="badge ${active ? 'badge-success' : 'badge-danger'}">${active ? 'Ativa' : 'Inativa'}</span></h4>
+          <p>${esc(typeLabels[unit.type] || unit.type)}${unit.neighborhood ? ' · ' + esc(unit.neighborhood) : ''}</p>
+        </div>
+        <div class="row" style="gap:6px">
+          <button class="btn btn-outline btn-sm" type="button" onclick="editUnit('${unit.id}')">Editar</button>
+          <button class="btn btn-outline btn-sm" type="button" onclick="toggleUnit('${unit.id}',${active ? 0 : 1})">${active ? 'Desativar' : 'Ativar'}</button>
+        </div>
+      </div>`;
+    }
+
+    window.editUnit = function (id) {
+      const unit = units.find(item => item.id === id);
+      if (!unit) return;
+      editingUnitId = id;
+      document.getElementById('unitName').value = unit.name || '';
+      document.getElementById('unitType').value = unit.type || 'ubs';
+      document.getElementById('unitNeighborhood').value = unit.neighborhood || '';
+      document.getElementById('unitFormTitle').textContent = 'Editar unidade de saúde';
+      document.getElementById('unitSubmit').textContent = 'Salvar alterações';
+      document.getElementById('unitCancel').style.display = 'inline-flex';
+      document.getElementById('unitForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    window.resetUnitForm = function () {
+      editingUnitId = null;
+      document.getElementById('unitForm').reset();
+      document.getElementById('unitType').value = 'ubs';
+      document.getElementById('unitFormTitle').textContent = 'Cadastrar unidade de saúde';
+      document.getElementById('unitSubmit').textContent = 'Adicionar unidade';
+      document.getElementById('unitCancel').style.display = 'none';
+    };
+
+    async function saveUnit(e) {
+      e.preventDefault();
+      const payload = Object.fromEntries(new FormData(e.target));
+      const button = document.getElementById('unitSubmit');
+      button.disabled = true;
+      try {
+        const path = editingUnitId ? '/health-units/' + encodeURIComponent(editingUnitId) : '/health-units';
+        if (editingUnitId) await apiPatch(path, payload);
+        else await apiPost(path, payload);
+        toast(editingUnitId ? 'Unidade atualizada' : 'Unidade cadastrada', 'success');
+        resetUnitForm();
+        await loadUnits();
+        await loadHealthUnitsRegions();
+      } catch (err) {
+        toast(err.message || 'Erro ao salvar unidade', 'error');
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    window.toggleUnit = async function (id, active) {
+      try {
+        await apiPatch('/health-units/' + encodeURIComponent(id), { active });
+        toast(active ? 'Unidade ativada' : 'Unidade desativada', 'success');
+        await loadUnits();
+        await loadHealthUnitsRegions();
+      } catch (err) {
+        toast(err.message || 'Erro ao atualizar unidade', 'error');
+      }
+    };
+
+    async function loadOverview() {
+      try {
+        const [A, E, D, S] = await Promise.all([
+          apiGet('/admin/appointments?limit=20'),
+          apiGet('/admin/exams?limit=20'),
+          apiGet('/diseases?active=true'),
+          apiGet('/admin/stats'),
+        ]);
+        document.getElementById('stats').innerHTML =
+          stat('Consultas', A.length) + stat('Exames', E.length) + stat('Usuários pendentes', Number(S.users.pending || 0)) + stat('Unidades ativas', Number(S.units.active || 0)) + stat('Alertas ativos', Number(S.diseases.active || D.length));
+        document.getElementById('recentAppts').innerHTML = A.length ? renderActionableTable(A, ['user_name', 'scheduled_at', 'specialty', 'doctor', 'location', 'status'], 'appointments') : '<div class="empty">Sem consultas.</div>';
+        document.getElementById('recentExams').innerHTML = E.length ? renderActionableTable(E, ['user_name', 'scheduled_at', 'exam_type', 'location', 'status'], 'exams') : '<div class="empty">Sem exames.</div>';
+      } catch (err) { toast(err.message || 'Erro ao carregar dados', 'error'); }
+    }
+
+    window.adminAction = async function (kind, id, status) {
+      try { await apiPatch('/admin/' + kind + '/' + encodeURIComponent(id), { status }); toast('Atualizado', 'success'); loadOverview(); }
+      catch (err) { toast(err.message || 'Erro', 'error'); }
+    };
+
+    window.downloadSummaryReport = async function () {
+      try {
+        const response = await fetch(window.API_BASE + '/admin/export/summary.csv', {
+          headers: { Authorization: 'Bearer ' + localStorage.getItem('saude_token') }
+        });
+        if (!response.ok) throw new Error('Não foi possível gerar o relatório.');
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'saude-plus-resumo-administrativo.csv';
+        link.click();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        toast(err.message || 'Erro ao baixar relatório', 'error');
+      }
+    };
+
+    /* ===== MODAL DE REAGENDAMENTO (3.2) ===== */
+    function ensureReagendarModal() {
+      if (document.getElementById('reagendarModal')) return;
+      const style = document.createElement('style');
+      style.textContent = `#reagendarModal{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.45)}
+  #reagendarModal.show{display:flex}
+  #reagendarModal .reagendar-modal-card{width:min(400px,100%);background:var(--surface,#fff);border:1px solid var(--border,#ddd);border-radius:16px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.22)}
+  #reagendarModal h3{margin:0 0 10px}
+  #reagendarModal .reagendar-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}`;
+      document.head.appendChild(style);
+
+      document.body.insertAdjacentHTML('beforeend', `
+    <div id="reagendarModal" role="dialog" aria-modal="true">
+      <div class="reagendar-modal-card">
+        <h3>Reagendar atendimento</h3>
+        <p class="muted" style="font-size:.9rem;margin-bottom:14px">Selecione a nova data e horário:</p>
+        <div class="field">
+          <label>Data/hora</label>
+          <input class="input" id="reagendarInputDate" type="datetime-local" required>
+        </div>
+        <div class="reagendar-modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeReagendarModal()">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="reagendarConfirmBtn" onclick="confirmReagendar()">Salvar</button>
+        </div>
+      </div>
+    </div>
+  `);
+    }
+
+    function nowLocalForInput() {
+      const d = new Date(); d.setSeconds(0, 0);
+      return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    }
+
+    window.adminReagendar = function (kind, id) {
+      ensureReagendarModal();
+      pendingReagendar = { kind, id };
+      const input = document.getElementById('reagendarInputDate');
+      input.min = nowLocalForInput();
+      input.value = '';
+      document.getElementById('reagendarModal').classList.add('show');
+    };
+
+    function closeReagendarModal() {
+      const m = document.getElementById('reagendarModal');
+      if (m) m.classList.remove('show');
+      pendingReagendar = null;
+    }
+
+    async function confirmReagendar() {
+      if (!pendingReagendar) return;
+      const inputVal = document.getElementById('reagendarInputDate').value;
+      if (!inputVal) {
+        toast('Selecione uma data e hora válidas', 'error');
+        return;
+      }
+
+      const formattedDate = inputVal.replace('T', ' ');
+      const btn = document.getElementById('reagendarConfirmBtn');
+      btn.disabled = true;
+      btn.textContent = 'Salvando...';
+
+      try {
+        await apiPatch('/admin/' + pendingReagendar.kind + '/' + encodeURIComponent(pendingReagendar.id), { scheduled_at: formattedDate });
+        toast('Reagendado com sucesso', 'success');
+        closeReagendarModal();
+        loadOverview();
+      } catch (err) {
+        toast(err.message || 'Erro ao reagendar', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Salvar';
+      }
+    }
+
+    /* ===== BUSCA DE USUÁRIOS E HISTÓRICO UNIFICADOS (3.4) ===== */
+    async function searchUsers(e) {
+      e.preventDefault();
+      const f = new FormData(e.target);
+      const q = f.get('q').trim(); const role = f.get('role'); const status = f.get('status');
+      const box = document.getElementById('userList');
+      const summary = document.getElementById('userSummary');
+      document.getElementById('userEditBox').style.display = 'none';
+      document.getElementById('userHistoryBox').style.display = 'none';
+      box.innerHTML = '<div class="spinner"></div>';
+      summary.textContent = 'Buscando usuários...';
+      try {
+        let path = '/admin/users?';
+        const params = [];
+        if (q) params.push('q=' + encodeURIComponent(q));
+        if (role) params.push('role=' + encodeURIComponent(role));
+        if (status) params.push('status=' + encodeURIComponent(status));
+        path += params.join('&');
+        const result = await apiGet(path);
+        const users = Array.isArray(result) ? result : (result.data || []);
+        const total = Array.isArray(result) ? users.length : Number(result.total || users.length);
+        summary.textContent = total === 1 ? '1 usuário encontrado.' : `${total} usuários encontrados.`;
+        if (!users.length) { box.innerHTML = '<div class="empty">Nenhum usuário encontrado com esses filtros.</div>'; return; }
+        const ROLE_LABEL = { paciente: 'Paciente', atendente: 'Atendente', admin: 'Administrador' };
+        const STATUS_CLASS = { ativo: 'badge-success', inativo: 'badge-danger', pendente: 'badge-warning' };
+        box.innerHTML = users.map(u => `
+      <div class="item">
+        <div>
+          <h4>${esc(u.full_name || '(Sem nome)')} <span class="badge">${ROLE_LABEL[u.role] || u.role}</span>
+            <span class="badge ${STATUS_CLASS[u.account_status] || ''}">${esc(u.account_status)}</span>
+          </h4>
+          <p class="muted">${esc(u.email)} ${u.mobile ? '· ' + esc(u.mobile) : ''} ${u.job_role ? '· ' + esc(u.job_role) : ''} ${u.last_login_at ? '· Último acesso: ' + fmtDate(u.last_login_at) : '· Nunca acessou'}</p>
+        </div>
+        <div class="row" style="gap:6px">
+          <button class="btn btn-outline btn-sm" onclick="viewUser('${u.id}')">Abrir perfil</button>
+          <button class="btn btn-outline btn-sm" onclick="showHistory('${u.id}','${esc(u.full_name || '')}')">Abrir histórico</button>
+        </div>
+      </div>`).join('');
+      } catch (err) { summary.textContent = ''; box.innerHTML = `<div class="empty">${esc(err.message || 'Erro')}</div>`; }
+    }
+
+    window.showHistory = async function (userId, name) {
+      const box = document.getElementById('userHistoryBox');
+      document.getElementById('userEditBox').style.display = 'none';
+      box.style.display = 'block';
+      box.innerHTML = '<div class="card"><div class="spinner"></div></div>';
+      box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      try {
+        const data = await apiGet('/admin/history?userId=' + encodeURIComponent(userId));
+        const user = data.user || { id: userId, full_name: name };
+        box.innerHTML = `<div class="card">
+      <div class="row between" style="margin-bottom:12px">
+        <h3 style="margin:0">Histórico de ${esc(user.full_name || 'Usuário')}</h3>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('userHistoryBox').style.display='none'">Fechar</button>
+      </div>
+      <p class="muted" style="margin-top:0">${(data.appointments || []).length} consultas · ${(data.exams || []).length} exames</p>
+      
+      <h4 style="margin-top:18px">Consultas</h4>
+      ${(data.appointments || []).length ? renderTable(data.appointments, ['scheduled_at', 'specialty', 'doctor', 'location', 'status']) : '<div class="empty">Sem consultas.</div>'}
+      <h4 style="margin-top:18px">Exames</h4>
+      ${(data.exams || []).length ? renderTable(data.exams, ['scheduled_at', 'exam_type', 'location', 'status']) : '<div class="empty">Sem exames.</div>'}
+    </div>`;
+      } catch (err) { box.innerHTML = `<div class="card"><div class="empty">${esc(err.message || 'Erro ao carregar histórico')}</div></div>`; }
+    };
+
+    /* ===== PERFIL E MUDANÇA DE STATUS COM MOTIVO (3.3) ===== */
+    window.viewUser = async function (id) {
+      const box = document.getElementById('userEditBox');
+      document.getElementById('userHistoryBox').style.display = 'none';
+      box.style.display = 'block'; box.innerHTML = '<div class="card"><div class="spinner"></div></div>';
+      box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      try {
+        const u = await apiGet('/admin/users/' + encodeURIComponent(id));
+        const STATUSES = ['ativo', 'pendente', 'inativo'];
+        const STATUS_LABEL = { ativo: 'Ativo', pendente: 'Pendente (aguardando ativação)', inativo: 'Inativo' };
+        box.innerHTML = `<div class="card">
+      <div class="row between" style="margin-bottom:16px">
+        <h3 style="margin:0">${esc(u.full_name)}</h3>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('userEditBox').style.display='none'">Fechar</button>
+      </div>
+      <h4>Identificação e contato</h4>
+      <div class="grid grid-2" style="gap:10px;margin-bottom:16px;font-size:.9rem">
+        ${row2('E-mail', u.email)} ${row2('Celular', u.mobile || '—')}
+        ${row2('Nascimento', u.birth_date ? new Date(u.birth_date).toLocaleDateString('pt-BR') : '—')} ${row2('Gênero', u.gender || '—')}
+        ${row2('Tipo sanguíneo', u.blood_type || '—')} ${row2('Cargo', u.job_role || '—')}
+        ${row2('Mãe', u.mother_name || '—')} ${row2('Pai', u.father_name || '—')}
+      </div>
+      <h4>Documentos protegidos</h4>
+      <div class="grid grid-2" style="gap:10px;margin-bottom:16px;font-size:.9rem">
+        ${row2('CPF', u.cpf || '—')} ${row2('RG', u.rg || '—')}
+      </div>
+      <h4>Endereço</h4>
+      <div class="grid grid-2" style="gap:10px;margin-bottom:16px;font-size:.9rem">
+        ${row2('CEP', u.cep || '—')} ${row2('Endereço', u.street ? (u.street + (u.address_number ? ', ' + u.address_number : '')) : '—')}
+        ${row2('Bairro', u.neighborhood || '—')} ${row2('Cidade/UF', u.city ? (u.city + (u.state ? ' / ' + u.state : '')) : '—')}
+        ${row2('Zona', u.zone || '—')} ${row2('Ponto de referência', u.reference_point || '—')}
+      </div>
+      <p class="muted" style="font-size:.8rem;margin-bottom:8px">
+        <strong>Papel:</strong> ${u.role}
+      </p>
+      <div class="grid grid-2" style="gap:10px">
+        <div class="field">
+          <label>Status da conta</label>
+          <select class="select" id="edit_status_${u.id}">
+            ${STATUSES.map(s => `<option value="${s}" ${u.account_status === s ? 'selected' : ''}>${STATUS_LABEL[s]}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>Motivo da alteração <span class="muted" style="font-weight:400">(obrigatório ao mudar status)</span></label>
+          <input class="input" id="edit_reason_${u.id}" placeholder="Ex.: solicitação do paciente, cadastro duplicado">
+        </div>
+        ${u.role === 'admin' && SESSION.user.admin_level === 'superadmin' ? `<div class="field"><label>Nível administrativo</label><select class="select" id="edit_admin_level_${u.id}"><option value="superadmin" ${u.admin_level === 'superadmin' ? 'selected' : ''}>Superadmin</option><option value="gestor" ${(!u.admin_level || u.admin_level === 'gestor') ? 'selected' : ''}>Gestor</option><option value="atendimento" ${u.admin_level === 'atendimento' ? 'selected' : ''}>Atendimento</option><option value="alertas" ${u.admin_level === 'alertas' ? 'selected' : ''}>Alertas</option></select></div>` : ''}
+      </div>
+      <button class="btn btn-primary" style="margin-top:12px" onclick="adminUpdateUser('${u.id}')">Salvar status</button>
+    </div>`;
+      } catch (err) { box.innerHTML = `<div class="card"><div class="empty">${esc(err.message || 'Erro')}</div></div>`; }
+    };
+
+    function row2(label, value) {
+      return `<div><span class="muted" style="font-size:.75rem;text-transform:uppercase">${label}</span><p style="margin:2px 0 0;font-weight:500">${esc(value)}</p></div>`;
+    }
+
+    window.adminUpdateUser = async function (id) {
+      const account_status = document.getElementById('edit_status_' + id)?.value;
+      const reason = document.getElementById('edit_reason_' + id)?.value.trim();
+      const adminLevel = document.getElementById('edit_admin_level_' + id)?.value;
+      try {
+        const payload = { account_status, reason, status_notes: reason };
+        if (adminLevel) payload.admin_level = adminLevel;
+        await apiPatch('/admin/users/' + encodeURIComponent(id), payload);
+        toast('Status atualizado', 'success');
+        viewUser(id);
+      }
+      catch (err) { toast(err.message || 'Erro', 'error'); }
+    };
+
+    async function loadDiseases() {
+      try {
+        const data = await apiGet('/admin/diseases');
+        diseases = Array.isArray(data) ? data : [];
+        document.getElementById('diseaseList').innerHTML = (data || []).length
+          ? data.map(d => `<div class="item"><div><h4>${esc(d.name)} <span class="badge ${levelClass(d.alert_level)}">${esc(d.alert_level)}</span> <span class="badge ${Number(d.active) ? 'badge-success' : 'badge-danger'}">${Number(d.active) ? 'Ativo' : 'Inativo'}</span></h4>
+          <p>${esc(d.description || '')} ${d.region ? '· ' + esc(d.region) : ''}</p></div>
+          <div class="row"><button class="btn btn-outline btn-sm" onclick="editDisease('${d.id}')">Editar</button><button class="btn btn-outline btn-sm" onclick="toggleDisease('${d.id}',${Number(d.active) ? 0 : 1})">${Number(d.active) ? 'Desativar' : 'Ativar'}</button><button class="btn btn-outline btn-sm" onclick="delDisease('${d.id}')">Excluir</button></div></div>`).join('')
+          : '<div class="empty">Sem registros.</div>';
+      } catch (err) { toast(err.message || 'Erro', 'error'); }
+    }
+
+    async function addDisease(e) {
+      e.preventDefault();
+      const f = Object.fromEntries(new FormData(e.target));
+      try { await apiPost('/admin/diseases', { ...f }); e.target.reset(); toast('Doença cadastrada', 'success'); loadDiseases(); }
+      catch (err) { toast(err.message || 'Erro', 'error'); }
+    }
+
+    window.delDisease = async (id) => {
+      deletingDiseaseId = id;
+      ensureDeleteDiseaseModal();
+      document.getElementById('deleteDiseaseModal').classList.add('show');
+    };
+
+    function ensureDeleteDiseaseModal() {
+      if (document.getElementById('deleteDiseaseModal')) return;
+      const style = document.createElement('style');
+      style.textContent = `#deleteDiseaseModal{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.45)}#deleteDiseaseModal.show{display:flex}#deleteDiseaseModal .modal-card{width:min(440px,100%);background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.22)}`;
+      document.head.appendChild(style);
+      document.body.insertAdjacentHTML('beforeend', `<div id="deleteDiseaseModal" role="dialog" aria-modal="true" aria-labelledby="deleteDiseaseTitle"><div class="modal-card"><h3 id="deleteDiseaseTitle">Excluir alerta?</h3><p>O alerta deixará de aparecer para os usuários. Essa ação não pode ser desfeita.</p><div class="row" style="justify-content:flex-end;margin-top:20px"><button type="button" class="btn btn-outline" onclick="closeDeleteDiseaseModal()">Voltar</button><button type="button" class="btn btn-primary" style="background:var(--danger);border-color:var(--danger)" onclick="confirmDeleteDisease()">Excluir alerta</button></div></div></div>`);
+    }
+
+    window.closeDeleteDiseaseModal = function () {
+      document.getElementById('deleteDiseaseModal')?.classList.remove('show');
+      deletingDiseaseId = null;
+    };
+
+    window.confirmDeleteDisease = async function () {
+      if (!deletingDiseaseId) return;
+      try {
+        await apiDelete('/admin/diseases/' + encodeURIComponent(deletingDiseaseId));
+        closeDeleteDiseaseModal();
+        toast('Alerta excluído', 'success');
+        loadDiseases();
+      } catch (err) { toast(err.message || 'Erro ao excluir alerta', 'error'); }
+    };
+
+    window.editDisease = async function (id) {
+      const disease = diseases.find(item => item.id === id);
+      if (!disease) return;
+      ensureDiseaseModal();
+      editingDiseaseId = id;
+      document.getElementById('diseaseEditName').value = disease.name || '';
+      document.getElementById('diseaseEditRegion').value = disease.region || '';
+      document.getElementById('diseaseEditLevel').value = disease.alert_level || 'baixo';
+      document.getElementById('diseaseEditDescription').value = disease.description || '';
+      document.getElementById('diseaseEditModal').classList.add('show');
+    };
+
+    function ensureDiseaseModal() {
+      if (document.getElementById('diseaseEditModal')) return;
+      const style = document.createElement('style');
+      style.textContent = `#diseaseEditModal{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.45)}#diseaseEditModal.show{display:flex}#diseaseEditModal .modal-card{width:min(560px,100%);background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.22)}`;
+      document.head.appendChild(style);
+      document.body.insertAdjacentHTML('beforeend', `<div id="diseaseEditModal" role="dialog" aria-modal="true" aria-labelledby="diseaseEditTitle"><div class="modal-card"><h3 id="diseaseEditTitle">Editar alerta</h3><form id="diseaseEditForm"><div class="field"><label for="diseaseEditName">Nome</label><input class="input" id="diseaseEditName" required></div><div class="grid grid-2"><div class="field"><label for="diseaseEditRegion">Região</label><input class="input" id="diseaseEditRegion"></div><div class="field"><label for="diseaseEditLevel">Nível</label><select class="select" id="diseaseEditLevel"><option value="baixo">Baixo</option><option value="medio">Médio</option><option value="alto">Alto</option></select></div></div><div class="field"><label for="diseaseEditDescription">Descrição</label><textarea class="textarea" id="diseaseEditDescription"></textarea></div><div class="row" style="justify-content:flex-end"><button type="button" class="btn btn-outline" onclick="closeDiseaseModal()">Cancelar</button><button type="submit" class="btn btn-primary" id="diseaseEditSubmit">Salvar alterações</button></div></form></div></div>`);
+      document.getElementById('diseaseEditForm').addEventListener('submit', saveDiseaseEdit);
+    }
+
+    window.closeDiseaseModal = function () {
+      document.getElementById('diseaseEditModal')?.classList.remove('show');
+      editingDiseaseId = null;
+    };
+
+    async function saveDiseaseEdit(e) {
+      e.preventDefault();
+      if (!editingDiseaseId) return;
+      const button = document.getElementById('diseaseEditSubmit');
+      button.disabled = true;
+      try {
+        await apiPatch('/admin/diseases/' + encodeURIComponent(editingDiseaseId), {
+          name: document.getElementById('diseaseEditName').value.trim(),
+          region: document.getElementById('diseaseEditRegion').value.trim(),
+          alert_level: document.getElementById('diseaseEditLevel').value,
+          description: document.getElementById('diseaseEditDescription').value.trim()
+        });
+        closeDiseaseModal();
+        toast('Alerta atualizado', 'success');
+        loadDiseases();
+      } catch (err) { toast(err.message || 'Erro ao editar alerta', 'error'); }
+      finally { button.disabled = false; }
+    }
+
+    window.toggleDisease = async function (id, active) {
+      try { await apiPatch('/admin/diseases/' + encodeURIComponent(id), { active }); toast(active ? 'Alerta ativado' : 'Alerta desativado', 'success'); loadDiseases(); }
+      catch (err) { toast(err.message || 'Erro ao atualizar alerta', 'error'); }
+    };
+
+    async function loadAuditLog(e) {
+      if (e) e.preventDefault();
+      try {
+        const params = new URLSearchParams({ limit: '50' });
+        const form = document.getElementById('auditFilterForm');
+        if (form) {
+          const data = new FormData(form);
+          if (data.get('entityType')) params.set('entityType', data.get('entityType'));
+          if (data.get('action')) params.set('action', data.get('action'));
+        }
+        const rows = await apiGet('/admin/audit-log?' + params.toString());
+        document.getElementById('auditLog').innerHTML = rows.length
+          ? rows.map(r => `<div class="item"><div>
+          <h4>${esc(r.actor_name || r.actor_email)} <span class="badge">${esc(r.action)}</span></h4>
+          <p>${esc(r.entity_type)} · ${esc(r.details || '')}</p>
+        </div><span class="muted">${fmtDate(r.created_at)}</span></div>`).join('')
+          : '<div class="empty">Nenhuma ação registrada ainda.</div>';
+      } catch (err) { toast(err.message || 'Erro', 'error'); }
+    }
+
+    window.resetAuditFilters = function () {
+      document.getElementById('auditFilterForm').reset();
+      loadAuditLog();
+    };
+
+    const COL_LABELS = { scheduled_at: 'Data/hora', specialty: 'Especialidade', doctor: 'Médico', location: 'Local', status: 'Status', user_name: 'Paciente', exam_type: 'Tipo de exame' };
+    function statusClass(s) { return s === 'cancelado' ? 'badge-danger' : s === 'concluido' ? 'badge-success' : s === 'pendente' ? 'badge-warning' : ''; }
+    function renderCell(col, row) {
+      const v = row[col];
+      if (col.includes('_at')) return fmtDate(v);
+      if (col === 'status') return `<span class="badge ${statusClass(v)}">${esc(v)}</span>`;
+      return esc(v ?? '—');
+    }
+    function renderTable(rows, cols) {
+      return `<table><thead><tr>${cols.map(c => `<th>${COL_LABELS[c] || c}</th>`).join('')}</tr></thead><tbody>
+    ${rows.map(r => `<tr>${cols.map(c => `<td>${renderCell(c, r)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+    }
+    function renderActionableTable(rows, cols, kind) {
+      const header = cols.map(c => `<th>${COL_LABELS[c] || c}</th>`).join('') + '<th>Ações</th>';
+      const body = rows.map(r => {
+        const cells = cols.map(c => `<td>${renderCell(c, r)}</td>`).join('');
+        const canAct = r.status === 'pendente' || r.status === 'confirmado';
+        const actions = canAct ? `<div class="row">
+      <button class="btn btn-outline btn-sm" onclick="adminAction('${kind}','${r.id}','confirmado')">Confirmar</button>
+      <button class="btn btn-outline btn-sm" onclick="adminAction('${kind}','${r.id}','cancelado')">Cancelar</button>
+      <button class="btn btn-outline btn-sm" onclick="adminReagendar('${kind}','${r.id}')">Reagendar</button>
+    </div>`: '<span class="muted">—</span>';
+        return `<tr>${cells}<td>${actions}</td></tr>`;
+      }).join('');
+      return `<table><thead><tr>${header}</tr></thead><tbody>${body}</tbody></table>`;
+    }
+    function stat(label, value) { return `<div class="card"><p class="muted" style="margin:0;font-size:.8rem;text-transform:uppercase">${label}</p><h2 style="margin:.2em 0 0;font-size:1.8rem">${value}</h2></div>`; }
+    function levelClass(l) { return l === 'alto' ? 'badge-danger' : l === 'medio' ? 'badge-warning' : 'badge-success'; }
+    function esc(s) { return (s ?? '').toString().replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+    document.querySelectorAll('.tabs').forEach(tabContainer => {
+      const tabs = Array.from(tabContainer.querySelectorAll('.tab'));
+
+      tabs.forEach((tab, index) => {
+        tab.addEventListener('keydown', (e) => {
+          if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+            e.preventDefault();
+            let newIndex = e.key === 'ArrowRight' ? index + 1 : index - 1;
+
+            if (newIndex >= tabs.length) newIndex = 0;
+            if (newIndex < 0) newIndex = tabs.length - 1;
+
+            tabs[newIndex].focus();
+            tabs[newIndex].click();
+          }
+        });
+      });
+    });
+
+    function setDateLimits() {
+      const now = new Date();
+      const minDateTime = nowLocalForInput();
+
+      const maxDateObj = new Date();
+      maxDateObj.setFullYear(now.getFullYear() + 1);
+      const maxDateTime = new Date(maxDateObj - maxDateObj.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+      document.querySelectorAll('input[type="datetime-local"]').forEach(el => {
+        el.min = minDateTime;
+        el.max = maxDateTime;
+      });
+    }
+
+  </script>
+</body>
+
+</html>

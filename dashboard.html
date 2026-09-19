@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Meu painel | Saúde+</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="assets/styles.css">
+  <script defer src="assets/api.js"></script>
+</head>
+
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html"><span class="brand-dot"></span>Saúde+</a>
+    <nav class="nav">
+      <span id="userEmail" class="muted"></span>
+      <button class="btn btn-outline btn-sm" onclick="signOut()">Sair</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <h1>Meu painel</h1>
+    <p class="muted">Acompanhe seus agendamentos, exames e alertas de saúde.</p>
+
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="inicio" role="tab" aria-selected="true" id="tab-inicio"
+        aria-controls="inicio">Início</button>
+      <button class="tab" data-tab="agendamentos" role="tab" aria-selected="false" id="tab-agendamentos"
+        aria-controls="agendamentos">Minha agenda</button>
+      <button class="tab" data-tab="consultas" role="tab" aria-selected="false" id="tab-consultas"
+        aria-controls="consultas">Consultas</button>
+      <button class="tab" data-tab="exames" role="tab" aria-selected="false" id="tab-exames"
+        aria-controls="exames">Exames</button>
+      <button class="tab" data-tab="alertas" role="tab" aria-selected="false" id="tab-alertas"
+        aria-controls="alertas">Alertas</button>
+    </div>
+
+    <!-- INÍCIO -->
+    <section class="tabpanel active" id="inicio" role="tabpanel" aria-labelledby="tab-inicio">
+      <div id="welcomeBanner"></div>
+      <div class="grid grid-5" id="stats"></div>
+      <div class="card" style="margin-top:16px">
+        <h3>Próximos eventos</h3>
+        <div id="upcoming">
+          <div class="spinner"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h3>Lembretes</h3>
+        <div id="reminders">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MINHA AGENDA -->
+    <section class="tabpanel" id="agendamentos" role="tabpanel" aria-labelledby="tab-agendamentos">
+      <div class="card">
+        <h3>Todos os meus agendamentos</h3>
+        <p class="muted" style="margin-top:-8px;margin-bottom:16px">Consultas e exames — ativos, confirmados e
+          cancelados.</p>
+        <div id="allScheduled">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONSULTAS -->
+    <section class="tabpanel" id="consultas" role="tabpanel" aria-labelledby="tab-consultas">
+      <div class="card">
+        <h3 id="apptFormTitle">Agendar consulta</h3>
+        <form id="apptForm" class="grid grid-2">
+          <div class="field">
+            <label>Especialidade</label>
+            <select class="select" name="specialty" id="specialtySelect" required>
+              <option value="">Selecione...</option>
+              <option>Clínico Geral</option>
+              <option>Pediatria</option>
+              <option>Ginecologia</option>
+              <option>Odontologia</option>
+              <option>Cardiologia</option>
+              <option>Dermatologia</option>
+              <option>Ortopedia</option>
+              <option>Psicologia</option>
+              <option>Psiquiatria</option>
+              <option value="__outra">Outra (especificar)</option>
+            </select>
+            <input class="input" name="specialty_outra" id="specialtyOutra" placeholder="Digite a especialidade"
+              style="display:none;margin-top:8px">
+          </div>
+          <div class="field">
+            <label>Profissional <span class="muted" style="font-weight:400">(opcional)</span></label>
+            <input class="input" name="doctor">
+          </div>
+          <div class="field">
+            <label>Local — Posto de Saúde / PSF</label>
+            <select class="select" name="location" id="apptLocationSelect" required>
+              <option value="">Carregando...</option>
+            </select>
+          </div>
+          <div class="field"><label>Data/hora</label><input class="input" name="scheduled_at" type="datetime-local"
+              required></div>
+          <div class="field" style="grid-column:1/-1"><label>Observações</label><textarea class="textarea"
+              name="notes"></textarea></div>
+          <div class="row" style="grid-column:1/-1">
+            <button class="btn btn-primary" type="submit">Agendar</button>
+            <button type="button" id="apptCancel" class="btn btn-outline btn-sm"
+              onclick="clearApptForm()">Cancelar</button>
+            <button type="button" id="apptCancelEdit" class="btn btn-outline btn-sm" style="display:none"
+              onclick="cancelEditAppt()">Cancelar edição</button>
+          </div>
+        </form>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h3>Minhas consultas</h3>
+        <div id="appts">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EXAMES -->
+    <section class="tabpanel" id="exames" role="tabpanel" aria-labelledby="tab-exames">
+      <div class="card">
+        <h3 id="examFormTitle">Agendar exame</h3>
+        <form id="examForm" class="grid grid-2">
+          <div class="field">
+            <label>Tipo de exame</label>
+            <select class="select" name="exam_type" required>
+              <option value="">Selecione...</option>
+              <option>Laboratoriais (sangue, urina...)</option>
+              <option>Imagem (raio-x, ultrassom...)</option>
+              <option>Cardiológico</option>
+              <option>Oftalmológico</option>
+              <option>Otorrinolaringológico</option>
+              <option>Ginecológico</option>
+              <option>Urológico</option>
+              <option>Neurológico</option>
+              <option value="__outro">Outro (especificar)</option>
+            </select>
+            <input class="input" name="exam_type_outro" id="examTypeOutro" placeholder="Digite o tipo de exame"
+              style="display:none;margin-top:8px">
+          </div>
+          <div class="field">
+            <label>Local</label>
+            <select class="select" name="location" id="examLocationSelect" required>
+              <option value="">Carregando...</option>
+            </select>
+          </div>
+          <div class="field" style="grid-column:1/-1"><label>Data/hora</label><input class="input" name="scheduled_at"
+              type="datetime-local" required></div>
+          <div class="field" style="grid-column:1/-1"><label>Observações</label><textarea class="textarea"
+              name="notes"></textarea></div>
+          <div class="row" style="grid-column:1/-1">
+            <button class="btn btn-primary" type="submit">Agendar</button>
+            <button type="button" id="examCancel" class="btn btn-outline btn-sm"
+              onclick="clearExamForm()">Cancelar</button>
+            <button type="button" id="examCancelEdit" class="btn btn-outline btn-sm" style="display:none"
+              onclick="cancelEditExam()">Cancelar edição</button>
+          </div>
+        </form>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h3>Meus exames</h3>
+        <div id="exams">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ALERTAS -->
+    <section class="tabpanel" id="alertas" role="tabpanel" aria-labelledby="tab-alertas">
+      <div class="card">
+        <h3>Doenças em alerta na sua região</h3>
+        <div id="diseases">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    let SESSION;
+    let lastAppointments = [];
+    let lastExams = [];
+    let editingApptId = null;
+    let editingExamId = null;
+    let pendingCancel = null;
+
+    window.addEventListener('load', async () => {
+      try {
+        SESSION = await requireAuth();
+        if (!SESSION) return;
+        const role = SESSION.user.role;
+        if (role === 'admin') { location.replace('admin.html'); return; }
+        if (role === 'atendente') { location.replace('atendente.html'); return; }
+
+        document.getElementById('userEmail').textContent = SESSION.user.email;
+
+        document.querySelectorAll('.tab').forEach(t =>
+          t.addEventListener('click', () => switchTab(t.dataset.tab))
+        );
+        document.getElementById('apptForm').addEventListener('submit', addAppt);
+        document.getElementById('examForm').addEventListener('submit', addExam);
+        document.getElementById('specialtySelect').addEventListener('change', toggleSpecialtyOutra);
+        document.querySelector('#examForm [name="exam_type"]').addEventListener('change', toggleExamTypeOutro);
+
+        const minDateTime = nowLocalForInput();
+        document.querySelectorAll('[name=scheduled_at]').forEach(el => el.min = minDateTime);
+
+        await loadHealthUnits();
+        await loadAll();
+      } catch (err) {
+        console.error(err);
+        toast(err.message || 'Erro ao carregar o painel', 'error');
+      }
+    });
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab').forEach(t => {
+        const active = t.dataset.tab === name;
+        t.classList.toggle('active', active);
+        t.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      document.querySelectorAll('.tabpanel').forEach(p =>
+        p.classList.toggle('active', p.id === name)
+      );
+    }
+
+    function nowLocalForInput() {
+      const d = new Date(); d.setSeconds(0, 0);
+      return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    }
+    function toDatetimeLocalValue(s) { return s ? s.replace(' ', 'T').slice(0, 16) : ''; }
+    function isOverdue(at, status) { return new Date(at) < new Date() && status === 'pendente'; }
+
+    function toggleSpecialtyOutra() {
+      const isOutra = document.getElementById('specialtySelect').value === '__outra';
+      const inp = document.getElementById('specialtyOutra');
+      inp.style.display = isOutra ? 'block' : 'none';
+      inp.required = isOutra;
+      if (!isOutra) inp.value = '';
+    }
+
+    function toggleExamTypeOutro() {
+      const isOutro = document.querySelector('#examForm [name="exam_type"]').value === '__outro';
+      const inp = document.getElementById('examTypeOutro');
+      inp.style.display = isOutro ? 'block' : 'none';
+      inp.required = isOutro;
+      if (!isOutro) inp.value = '';
+    }
+
+    async function loadHealthUnits() {
+      const selects = [
+        document.getElementById('apptLocationSelect'),
+        document.getElementById('examLocationSelect')
+      ];
+      selects.forEach(s => { if (s) s.innerHTML = '<option value="">Carregando...</option>'; });
+
+      try {
+        const units = await apiGet('/health-units');
+        const rows = Array.isArray(units) ? units : [];
+        if (!rows.length) {
+          selects.forEach(s => { if (s) s.innerHTML = '<option value="">Nenhuma unidade cadastrada</option>'; });
+          return;
+        }
+        const opts = '<option value="">Selecione...</option>' + rows.map(u => {
+          const name = u.name || '';
+          const neighborhood = u.neighborhood ? ' – ' + u.neighborhood : '';
+          return `<option value="${esc(name)}">${esc(name)}${esc(neighborhood)}</option>`;
+        }).join('');
+        selects.forEach(s => { if (s) s.innerHTML = opts; });
+      } catch (err) {
+        console.error('GET /health-units:', err);
+        selects.forEach(s => { if (s) s.innerHTML = '<option value="">Erro ao carregar unidades</option>'; });
+        toast(err.message || 'Erro ao carregar unidades de saúde', 'error');
+      }
+    }
+
+    async function loadAll() {
+      try {
+        const [A, E, D, R] = await Promise.all([
+          apiGet('/me/appointments'),
+          apiGet('/me/exams'),
+          apiGet('/diseases?active=true'),
+          apiGet('/me/reminders')
+        ]);
+        lastAppointments = Array.isArray(A) ? A : [];
+        lastExams = Array.isArray(E) ? E : [];
+        const unread = Array.isArray(R) ? R.filter(r => !r.read).length : 0;
+
+        document.getElementById('welcomeBanner').innerHTML =
+          (A.length === 0 && E.length === 0)
+            ? `<div class="card" style="margin-bottom:16px;background:var(--primary-100);border-color:var(--primary)">
+           <h3 style="margin-bottom:4px">Bem-vindo(a) ao Saúde+</h3>
+           <p style="margin:0">Use as abas <strong>Consultas</strong> ou <strong>Exames</strong> para fazer seu primeiro agendamento.</p>
+         </div>` : '';
+
+        document.getElementById('stats').innerHTML =
+          stat('Consultas', A.length) + stat('Exames', E.length) +
+          stat('Alertas ativos', D.length) + stat('Lembretes', unread);
+
+        const upcoming = [
+          ...A.map(x => ({ type: 'Consulta', title: x.specialty, at: x.scheduled_at, sub: x.location, status: x.status })),
+          ...E.map(x => ({ type: 'Exame', title: x.exam_type, at: x.scheduled_at, sub: x.location, status: x.status }))
+        ].filter(x => new Date(x.at) >= new Date() && x.status !== 'cancelado')
+          .sort((a, b) => new Date(a.at) - new Date(b.at)).slice(0, 5);
+
+        document.getElementById('upcoming').innerHTML = upcoming.length
+          ? upcoming.map(x => `<div class="item"><div><h4><span class="badge" style="margin-right:6px">${esc(x.type)}</span>${esc(x.title)}</h4><p>${esc(x.sub)}</p></div><span class="muted">${fmtDate(x.at)}</span></div>`).join('')
+          : '<div class="empty">Nenhum evento futuro agendado.</div>';
+
+        document.getElementById('reminders').innerHTML = R.length
+          ? R.slice(0, 5).map(r => `<div class="item"><div><h4>${esc(r.title)}</h4><p>${esc(r.message || '')}</p></div><span class="badge ${r.read ? '' : 'badge-warning'}">${r.read ? 'Lido' : 'Novo'}</span></div>`).join('')
+          : '<div class="empty">Nenhum lembrete no momento.</div>';
+
+        const allItems = [
+          ...A.map(r => ({ ...r, _type: 'Consulta', _title: r.specialty, _sub: r.location })),
+          ...E.map(r => ({ ...r, _type: 'Exame', _title: r.exam_type, _sub: r.location }))
+        ].sort((a, b) => new Date(b.scheduled_at) - new Date(a.scheduled_at));
+
+        document.getElementById('allScheduled').innerHTML = allItems.length
+          ? allItems.map(r => `<div class="item"><div>
+          <h4><span class="badge" style="margin-right:6px">${esc(r._type)}</span>${esc(r._title)}</h4>
+          <p>${esc(r._sub)} · <span class="badge ${statusClass(r.status)}">${esc(r.status)}</span>
+          ${isOverdue(r.scheduled_at, r.status) ? ' <span class="badge badge-warning">atrasado</span>' : ''}</p>
+        </div><span class="muted">${fmtDate(r.scheduled_at)}</span></div>`).join('')
+          : '<div class="empty">Nenhum agendamento encontrado.</div>';
+
+        renderList('appts', A,
+          a => `<h4>${esc(a.specialty)} ${a.doctor ? 'com ' + esc(a.doctor) : ''}</h4>
+          <p>${esc(a.location)} · <span class="badge ${statusClass(a.status)}">${esc(a.status)}</span>
+          ${isOverdue(a.scheduled_at, a.status) ? ' <span class="badge badge-warning">atrasado</span>' : ''}</p>`,
+          a => fmtDate(a.scheduled_at), 'appointments', 'editAppt');
+
+        renderList('exams', E,
+          e => `<h4>${esc(e.exam_type)}</h4>
+          <p>${esc(e.location)} · <span class="badge ${statusClass(e.status)}">${esc(e.status)}</span>
+          ${isOverdue(e.scheduled_at, e.status) ? ' <span class="badge badge-warning">atrasado</span>' : ''}</p>`,
+          e => fmtDate(e.scheduled_at), 'exams', 'editExam');
+
+        document.getElementById('diseases').innerHTML = D.length
+          ? D.map(d => `<div class="item"><div><h4>${esc(d.name)} <span class="badge ${levelClass(d.alert_level)}">${esc(d.alert_level)}</span></h4><p>${esc(d.description || '')} ${d.region ? '· ' + esc(d.region) : ''}</p></div></div>`).join('')
+          : '<div class="empty">Sem alertas ativos.</div>';
+      } catch (err) {
+        console.error(err);
+        toast(err.message || 'Erro ao carregar dados', 'error');
+      }
+    }
+
+    function renderList(id, rows, title, right, kind, editFn) {
+      const el = document.getElementById(id);
+      if (!rows.length) { el.innerHTML = '<div class="empty">Nenhum registro.</div>'; return; }
+      el.innerHTML = rows.map(r => {
+        const canEdit = editFn && (r.status === 'pendente' || r.status === 'confirmado');
+        const canCancel = r.status === 'pendente' || r.status === 'confirmado';
+        return `<div class="item"><div>${title(r)}</div><div class="row">
+      <span class="muted">${right(r)}</span>
+      ${canEdit ? `<button class="btn btn-outline btn-sm" onclick="${editFn}('${esc(r.id)}')">Editar</button>` : ''}
+      ${canCancel ? `<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="cancelItem('${kind}','${esc(r.id)}','${esc(r._type || '')}')">Cancelar</button>` : ''}
+    </div></div>`;
+      }).join('');
+    }
+
+    function ensureCancelModal() {
+      if (document.getElementById('cancelModal')) return;
+      const style = document.createElement('style');
+      style.textContent = `#cancelModal{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.45)}
+  #cancelModal.show{display:flex}#cancelModal .cancel-modal-card{width:min(460px,100%);background:var(--surface,#fff);border:1px solid var(--border,#ddd);border-radius:16px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.22)}
+  #cancelModal h3{margin:0 0 10px}#cancelModal p{margin:0;line-height:1.55}#cancelModal .cancel-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}`;
+      document.head.appendChild(style);
+      document.body.insertAdjacentHTML('beforeend', `<div id="cancelModal" role="dialog" aria-modal="true" aria-labelledby="cancelModalTitle">
+    <div class="cancel-modal-card"><h3 id="cancelModalTitle">Cancelar agendamento?</h3>
+    <p id="cancelModalText">Se você cancelar, pode não haver outra vaga disponível tão cedo.</p>
+    <div class="cancel-modal-actions"><button type="button" class="btn btn-outline" id="cancelModalBack">Voltar</button>
+    <button type="button" class="btn btn-primary" id="cancelModalConfirm" style="background:var(--danger);border-color:var(--danger)">Sim, cancelar</button></div></div></div>`);
+      document.getElementById('cancelModalBack').addEventListener('click', closeCancelModal);
+      document.getElementById('cancelModal').addEventListener('click', e => { if (e.target.id === 'cancelModal') closeCancelModal(); });
+      document.getElementById('cancelModalConfirm').addEventListener('click', confirmCancel);
+    }
+
+    window.cancelItem = function (kind, id, type) {
+      ensureCancelModal(); pendingCancel = { kind, id, type };
+      const label = type || (kind === 'appointments' ? 'consulta' : 'exame');
+      document.getElementById('cancelModalTitle').textContent = `Cancelar ${label.toLowerCase()}?`;
+      document.getElementById('cancelModalText').textContent = 'Se você cancelar, pode não haver outra vaga disponível tão cedo. O agendamento continuará visível no histórico como cancelado.';
+      document.getElementById('cancelModal').classList.add('show');
+    };
+    function closeCancelModal() { const m = document.getElementById('cancelModal'); if (m) m.classList.remove('show'); pendingCancel = null; }
+    async function confirmCancel() {
+      if (!pendingCancel) return;
+      const { kind, id } = pendingCancel, b = document.getElementById('cancelModalConfirm');
+      b.disabled = true; b.textContent = 'Cancelando...';
+      try {
+        await apiPatch('/me/' + encodeURIComponent(kind) + '/' + encodeURIComponent(id) + '/cancel', {});
+        closeCancelModal(); toast('Agendamento cancelado', 'success'); await loadAll();
+      } catch (err) { toast(err.message || 'Erro ao cancelar', 'error'); }
+      finally { b.disabled = false; b.textContent = 'Sim, cancelar'; }
+    }
+
+    window.editAppt = function (id) {
+      const a = lastAppointments.find(x => x.id === id); if (!a) return;
+      editingApptId = id; const form = document.getElementById('apptForm'), sel = document.getElementById('specialtySelect');
+      const known = Array.from(sel.options).some(o => o.value === a.specialty);
+      if (known) { sel.value = a.specialty; toggleSpecialtyOutra(); } else { sel.value = '__outra'; toggleSpecialtyOutra(); document.getElementById('specialtyOutra').value = a.specialty; }
+      form.doctor.value = a.doctor || ''; form.location.value = a.location; form.scheduled_at.value = toDatetimeLocalValue(a.scheduled_at); form.notes.value = a.notes || '';
+      document.getElementById('apptFormTitle').textContent = 'Editar consulta'; form.querySelector('button[type=submit]').textContent = 'Salvar alterações';
+      document.getElementById('apptCancel').style.display = 'none'; document.getElementById('apptCancelEdit').style.display = 'inline-flex';
+      switchTab('consultas'); form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    window.cancelEditAppt = function () { editingApptId = null; const f = document.getElementById('apptForm'); f.reset(); toggleSpecialtyOutra(); document.getElementById('apptFormTitle').textContent = 'Agendar consulta'; f.querySelector('button[type=submit]').textContent = 'Agendar'; document.getElementById('apptCancel').style.display = 'inline-flex'; document.getElementById('apptCancelEdit').style.display = 'none'; };
+    window.clearApptForm = function () { if (editingApptId) { cancelEditAppt(); return; } const f = document.getElementById('apptForm'); f.reset(); toggleSpecialtyOutra(); };
+
+    window.editExam = function (id) {
+      const e = lastExams.find(x => x.id === id); if (!e) return;
+      editingExamId = id; const f = document.getElementById('examForm'), sel = f.exam_type;
+      const known = Array.from(sel.options).some(o => o.value === e.exam_type);
+      if (known) { sel.value = e.exam_type; toggleExamTypeOutro(); } else { sel.value = '__outro'; toggleExamTypeOutro(); document.getElementById('examTypeOutro').value = e.exam_type || ''; }
+      f.location.value = e.location; f.scheduled_at.value = toDatetimeLocalValue(e.scheduled_at); f.notes.value = e.notes || '';
+      document.getElementById('examFormTitle').textContent = 'Editar exame'; f.querySelector('button[type=submit]').textContent = 'Salvar alterações';
+      document.getElementById('examCancel').style.display = 'none'; document.getElementById('examCancelEdit').style.display = 'inline-flex';
+      switchTab('exames'); f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    window.cancelEditExam = function () { editingExamId = null; const f = document.getElementById('examForm'); f.reset(); toggleExamTypeOutro(); document.getElementById('examFormTitle').textContent = 'Agendar exame'; f.querySelector('button[type=submit]').textContent = 'Agendar'; document.getElementById('examCancel').style.display = 'inline-flex'; document.getElementById('examCancelEdit').style.display = 'none'; };
+    window.clearExamForm = function () { if (editingExamId) { cancelEditExam(); return; } const f = document.getElementById('examForm'); f.reset(); toggleExamTypeOutro(); };
+
+    async function addAppt(e) {
+      e.preventDefault(); const f = e.target, b = f.querySelector('button[type=submit]'); if (b.disabled) return;
+      const data = Object.fromEntries(new FormData(f)); if (data.specialty === '__outra') data.specialty = (data.specialty_outra || '').trim(); delete data.specialty_outra;
+      if (!data.specialty) { toast('Informe a especialidade.', 'error'); return; }
+      b.disabled = true; const old = b.textContent; b.textContent = 'Enviando...';
+      try { if (editingApptId) { await apiPut('/me/appointments/' + encodeURIComponent(editingApptId), { ...data }); toast('Consulta atualizada', 'success'); cancelEditAppt(); } else { await apiPost('/me/appointments', { ...data }); f.reset(); toggleSpecialtyOutra(); toast('Consulta agendada', 'success'); } await loadAll(); }
+      catch (err) { toast(err.message || 'Erro ao agendar consulta', 'error'); }
+      finally { b.disabled = false; if (!editingApptId) b.textContent = old; }
+    }
+
+    async function addExam(e) {
+      e.preventDefault(); const f = e.target, b = f.querySelector('button[type=submit]'); if (b.disabled) return;
+      const data = Object.fromEntries(new FormData(f)); if (data.exam_type === '__outro') data.exam_type = (data.exam_type_outro || '').trim(); delete data.exam_type_outro;
+      if (!data.exam_type) { toast('Informe o tipo de exame.', 'error'); return; }
+      b.disabled = true; const old = b.textContent; b.textContent = 'Enviando...';
+      try { if (editingExamId) { await apiPut('/me/exams/' + encodeURIComponent(editingExamId), { ...data }); toast('Exame atualizado', 'success'); cancelEditExam(); } else { await apiPost('/me/exams', { ...data }); f.reset(); toggleExamTypeOutro(); toast('Exame agendado', 'success'); } await loadAll(); }
+      catch (err) { toast(err.message || 'Erro ao agendar exame', 'error'); }
+      finally { b.disabled = false; if (!editingExamId) b.textContent = old; }
+    }
+
+    function statusClass(s) { return s === 'cancelado' ? 'badge-danger' : s === 'concluido' ? 'badge-success' : s === 'pendente' ? 'badge-warning' : ''; }
+    function stat(label, value) { return `<div class="card"><p class="muted" style="margin:0;font-size:.8rem;text-transform:uppercase">${esc(label)}</p><h2 style="margin:.2em 0 0;font-size:2rem">${value}</h2></div>`; }
+    function levelClass(l) { return l === 'alto' ? 'badge-danger' : l === 'medio' ? 'badge-warning' : 'badge-success'; }
+    function esc(s) { return (s ?? '').toString().replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+    document.querySelectorAll('.tabs').forEach(tabContainer => {
+      const tabs = Array.from(tabContainer.querySelectorAll('.tab'));
+
+      tabs.forEach((tab, index) => {
+        tab.addEventListener('keydown', (e) => {
+          if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+            e.preventDefault();
+            let newIndex = e.key === 'ArrowRight' ? index + 1 : index - 1;
+
+            if (newIndex >= tabs.length) newIndex = 0;
+            if (newIndex < 0) newIndex = tabs.length - 1;
+
+            tabs[newIndex].focus();
+            tabs[newIndex].click();
+          }
+        });
+      });
+    });
+
+    function setDateLimits() {
+      const now = new Date();
+      const minDateTime = nowLocalForInput();
+
+      const maxDateObj = new Date();
+      maxDateObj.setFullYear(now.getFullYear() + 1);
+      const maxDateTime = new Date(maxDateObj - maxDateObj.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+      document.querySelectorAll('input[type="datetime-local"]').forEach(el => {
+        el.min = minDateTime;
+        el.max = maxDateTime;
+      });
+    }
+
+    window.editAppt = function (id) {
+      const a = lastAppointments.find(x => x.id === id);
+      if (!a) return;
+      editingApptId = id;
+
+      const form = document.getElementById('apptForm');
+      if (form) form.classList.add('form-editing');
+
+      const sel = document.getElementById('specialtySelect');
+      const known = Array.from(sel.options).some(o => o.value === a.specialty);
+
+      if (known) {
+        sel.value = a.specialty;
+        toggleSpecialtyOutra();
+      } else {
+        sel.value = '__outra';
+        toggleSpecialtyOutra();
+        document.getElementById('specialtyOutra').value = a.specialty;
+      }
+
+      form.doctor.value = a.doctor || '';
+      form.location.value = a.location;
+      form.scheduled_at.value = toDatetimeLocalValue(a.scheduled_at);
+      form.notes.value = a.notes || '';
+
+      document.getElementById('apptFormTitle').textContent = 'Editar consulta';
+      form.querySelector('button[type=submit]').textContent = 'Salvar alterações';
+      document.getElementById('apptCancel').style.display = 'none';
+      document.getElementById('apptCancelEdit').style.display = 'inline-flex';
+
+      switchTab('consultas');
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    window.cancelEditAppt = function () {
+      editingApptId = null;
+      const f = document.getElementById('apptForm');
+      if (f) f.classList.remove('form-editing');
+      f.reset();
+      toggleSpecialtyOutra();
+      document.getElementById('apptFormTitle').textContent = 'Agendar consulta';
+      f.querySelector('button[type=submit]').textContent = 'Agendar';
+      document.getElementById('apptCancel').style.display = 'inline-flex';
+      document.getElementById('apptCancelEdit').style.display = 'none';
+    };
+
+    ensureCancelModal();
+  </script>
+</body>
+
+</html>

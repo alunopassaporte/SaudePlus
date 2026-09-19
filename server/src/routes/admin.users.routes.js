@@ -1,0 +1,133 @@
+const express = require('express');
+const pool = require('../db');
+const { verifyToken, requireAdmin } = require('../middleware/auth');
+const { logAction } = require('../utils/audit');
+
+const router = express.Router();
+router.use(verifyToken, requireAdmin);
+
+const SAFE_ROLES = ['paciente', 'atendente', 'admin'];
+const SAFE_STATUSES = ['ativo', 'inativo', 'pendente'];
+const SAFE_ADMIN_LEVELS = ['superadmin', 'gestor', 'atendimento', 'alertas'];
+
+// GET /admin/users — lista todos os usuários (SEM cpf/rg — só no endpoint individual)
+router.get('/', async (req, res, next) => {
+  try {
+    const role = req.query.role;
+    const status = req.query.status;
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const pageSize = Math.min(Math.max(parseInt(req.query.pageSize, 10) || 50, 1), 100);
+    const offset = (page - 1) * pageSize;
+    const query = req.query.q !== undefined ? req.query.q : req.query.email;
+    const search = query ? String(query).toLowerCase().trim() : null;
+
+    const filters = [];
+    let sql = `SELECT id, full_name, email, role, account_status,
+                      phone, mobile, birth_date, gender, job_role, admin_level, created_at, last_login_at
+           FROM users`;
+    const params = [];
+    if (role && SAFE_ROLES.includes(role)) { filters.push('role = ?'); params.push(role); }
+    if (status && SAFE_STATUSES.includes(status)) { filters.push('account_status = ?'); params.push(status); }
+    if (search) {
+      filters.push('(LOWER(full_name) LIKE ? OR LOWER(email) LIKE ? OR phone LIKE ? OR mobile LIKE ?)');
+      const pattern = '%' + search + '%';
+      params.push(pattern, pattern, pattern, pattern);
+    }
+    const whereClause = filters.length ? ' WHERE ' + filters.join(' AND ') : '';
+    sql += whereClause;
+    sql += ' ORDER BY full_name LIMIT ? OFFSET ?';
+    params.push(pageSize, offset);
+
+    const [rows] = await pool.query(sql, params);
+    const [[countRow]] = await pool.query('SELECT COUNT(*) AS total FROM users' + whereClause, params.slice(0, -2));
+    res.json({ data: rows, page, pageSize, total: Number(countRow.total) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /admin/users/:id — perfil completo incluindo CPF/RG (admin only)
+router.get('/:id', async (req, res, next) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT id, full_name, email, role, account_status,
+              phone, mobile, birth_date, gender, blood_type, admin_level,
+              mother_name, father_name,
+              cpf, rg,
+              cep, street, address_number, neighborhood, city, state,
+              job_role, created_at
+       FROM users WHERE id = ?`,
+      [req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Usuário não encontrado.' });
+    res.json(rows[0]);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PATCH /admin/users/:id — altera account_status e/ou job_role
+// Papel (role) só pode ser alterado diretamente no banco de dados.
+router.patch('/:id', async (req, res, next) => {
+  try {
+    const { account_status, job_role, admin_level, reason, status_notes } = req.body || {};
+    const updates = [];
+    const params = [];
+    const logParts = [];
+
+    const [[currentUser]] = await pool.query(
+      'SELECT account_status, job_role, admin_level FROM users WHERE id = ?',
+      [req.params.id]
+    );
+    if (!currentUser) return res.status(404).json({ error: 'Usuário não encontrado.' });
+
+    if (account_status !== undefined) {
+      if (!SAFE_STATUSES.includes(account_status)) {
+        return res.status(400).json({ error: 'Status inválido.' });
+      }
+      if (req.params.id === req.user.id) {
+        return res.status(400).json({ error: 'Você não pode alterar o status da própria conta.' });
+      }
+      const statusReason = String(reason || status_notes || '').trim();
+      if (account_status !== currentUser.account_status && !statusReason) {
+        return res.status(400).json({ error: 'Informe o motivo da alteração de status.' });
+      }
+      updates.push('account_status=?'); params.push(account_status); logParts.push(`status -> ${account_status}`);
+      if (statusReason) logParts.push(`motivo: ${statusReason}`);
+    }
+    if (job_role !== undefined) {
+      updates.push('job_role=?'); params.push(job_role || null); logParts.push(`cargo -> ${job_role}`);
+    }
+    if (admin_level !== undefined) {
+      if (req.user.admin_level !== 'superadmin') return res.status(403).json({ error: 'Somente o superadmin pode alterar níveis administrativos.' });
+      if (!SAFE_ADMIN_LEVELS.includes(admin_level)) return res.status(400).json({ error: 'Nível administrativo inválido.' });
+      updates.push('admin_level=?'); params.push(admin_level); logParts.push(`nível admin -> ${admin_level}`);
+    }
+
+    if (!updates.length) return res.status(400).json({ error: 'Nada para atualizar.' });
+
+    params.push(req.params.id);
+    const [result] = await pool.query(
+      `UPDATE users SET ${updates.join(', ')} WHERE id=?`, params
+    );
+    if (result.affectedRows === 0) return res.status(400).json({ error: 'Nenhuma alteração foi realizada.' });
+
+    const previous = [];
+    if (account_status !== undefined && account_status !== currentUser.account_status) {
+      previous.push(`status: ${currentUser.account_status} -> ${account_status}`);
+    }
+    if (job_role !== undefined && job_role !== currentUser.job_role) {
+      previous.push(`cargo: ${currentUser.job_role || 'não informado'} -> ${job_role || 'não informado'}`);
+    }
+    if (admin_level !== undefined && admin_level !== currentUser.admin_level) {
+      previous.push(`nível admin: ${currentUser.admin_level || 'gestor'} -> ${admin_level}`);
+    }
+    await logAction(req.user.id, 'admin_update_user', 'user', req.params.id,
+      `${previous.join('; ')}${logParts.length ? `; ${logParts.join('; ')}` : ''}`);
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+module.exports = router;
