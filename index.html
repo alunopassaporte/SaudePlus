@@ -177,12 +177,14 @@
   </footer>
 
   <script>
-    // Se já logado, oferece atalho
+    // Se já logado, manda direto para o painel do próprio papel
     window.addEventListener('load', async () => {
       const session = await getSession();
       if (session) {
-        const admin = session.user && session.user.role === 'admin';
-        location.replace(admin ? 'admin.html' : 'dashboard.html');
+        const role = session.user && session.user.role;
+        if (role === 'admin') location.replace('admin.html');
+        else if (role === 'atendente') location.replace('atendente.html');
+        else location.replace('dashboard.html');
       }
     });
   </script>

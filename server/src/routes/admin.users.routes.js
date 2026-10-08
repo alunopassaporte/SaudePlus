@@ -22,8 +22,8 @@ router.get('/', async (req, res, next) => {
     const search = query ? String(query).toLowerCase().trim() : null;
 
     const filters = [];
-    let sql = `SELECT id, full_name, email, role, account_status,
-                      phone, mobile, birth_date, gender, job_role, admin_level, created_at, last_login_at
+    let sql = `SELECT id, full_name, social_name, email, role, account_status,
+                      phone, mobile, birth_date, gender, priority, race, job_role, admin_level, created_at, last_login_at
            FROM users`;
     const params = [];
     if (role && SAFE_ROLES.includes(role)) { filters.push('role = ?'); params.push(role); }
@@ -50,10 +50,11 @@ router.get('/', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
   try {
     const [rows] = await pool.query(
-      `SELECT id, full_name, email, role, account_status,
+      `SELECT id, full_name, social_name, email, role, account_status,
               phone, mobile, birth_date, gender, blood_type, admin_level,
+              priority, race, guardian_name,
               mother_name, father_name,
-              cpf, rg,
+              cpf, rg, cns,
               cep, street, address_number, neighborhood, city, state,
               job_role, created_at
        FROM users WHERE id = ?`,

@@ -293,3 +293,62 @@ tbody tr:last-child td{ border-bottom:none; }
   padding: 16px;
   transition: all 0.2s ease-in-out;
 }
+
+/* ---------- V3: avisos de erro por campo (item 1.10) ---------- */
+.has-error .input,
+.has-error .select,
+input.has-error,
+select.has-error,
+textarea.has-error {
+  border-color: var(--danger, #dc2626) !important;
+}
+.field-msg {
+  display: block;
+  margin-top: 5px;
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--danger, #dc2626);
+}
+.help-text {
+  display: block;
+  margin-top: 6px;
+  font-size: .78rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* ---------- V3: indicador de força de senha (item 1.9) ---------- */
+.pw-meter {
+  height: 6px;
+  margin-top: 8px;
+  border-radius: 99px;
+  background: var(--border, #e2e8f0);
+  overflow: hidden;
+}
+.pw-meter > span {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 99px;
+  transition: width .2s ease, background .2s ease;
+}
+.pw-meter.weak > span { background: var(--danger, #dc2626); }
+.pw-meter.medium > span { background: var(--warning, #e6a23c); }
+.pw-meter.strong > span { background: var(--success, #16a34a); }
+.pw-hint { display: block; margin-top: 5px; font-size: .78rem; font-weight: 600; }
+.pw-hint.weak { color: var(--danger, #dc2626); }
+.pw-hint.medium { color: var(--warning, #e6a23c); }
+.pw-hint.strong { color: var(--success, #16a34a); }
+
+/* ---------- V3: faixa de "editando agendamento" (item 5.5) ---------- */
+.edit-banner {
+  display: block;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm, 8px);
+  background: var(--primary-100, #e8f1ff);
+  border: 1px solid var(--primary, #0056b3);
+  color: var(--primary-600, #0056b3);
+  font-size: .88rem;
+  font-weight: 700;
+}

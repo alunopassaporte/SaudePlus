@@ -33,6 +33,8 @@
         aria-controls="diseases">Doenças</button>
       <button class="tab" data-tab="units" role="tab" aria-selected="false" id="tab-units"
         aria-controls="units">Unidades de Saúde</button>
+      <button class="tab" data-tab="profissionais" role="tab" aria-selected="false" id="tab-profissionais"
+        aria-controls="profissionais">Profissionais e Agenda</button>
       <button class="tab" data-tab="auditoria" role="tab" aria-selected="false" id="tab-auditoria"
         aria-controls="auditoria">Auditoria</button>
     </div>
@@ -163,6 +165,74 @@
           <div class="spinner"></div>
         </div>
       </div>
+      <div class="card" style="margin-top:16px">
+        <h3>Serviços oferecidos pela unidade</h3>
+        <p class="muted" style="margin-top:-8px">Especialidades de consulta e tipos de exame que o paciente pode escolher
+          para cada unidade. A fonte da verdade do agendamento.</p>
+        <form id="unitOfferForm" class="grid grid-2" style="margin-top:12px">
+          <div class="field">
+            <label for="offerUnitSel">Unidade</label>
+            <select class="select" id="offerUnitSel" required></select>
+          </div>
+          <div class="field">
+            <label for="offerKind">Tipo</label>
+            <select class="select" id="offerKind">
+              <option value="consulta">Consulta (especialidade)</option>
+              <option value="exame">Exame</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="offerName">Especialidade ou exame</label>
+            <input class="input" id="offerName" placeholder="Ex.: Cardiologia / Hemograma" required>
+          </div>
+          <div class="row" style="align-items:end;margin-bottom:14px">
+            <button class="btn btn-primary" type="submit">Adicionar serviço</button>
+          </div>
+        </form>
+        <div id="unitOfferList" style="margin-top:8px"></div>
+      </div>
+    </section>
+
+    <!-- ===== PROFISSIONAIS E AGENDA ===== -->
+    <section class="tabpanel" id="profissionais" role="tabpanel" aria-labelledby="tab-profissionais">
+      <div class="card">
+        <h3 id="profFormTitle">Cadastrar profissional</h3>
+        <p class="muted" style="margin-top:-8px">Profissional ativo só aparece no agendamento depois de vinculado a uma
+          unidade e a um serviço.</p>
+        <form id="profForm" class="grid grid-4">
+          <div class="field">
+            <label for="profName">Nome</label>
+            <input class="input" id="profName" name="name" required>
+          </div>
+          <div class="field">
+            <label for="profJobTitle">Cargo</label>
+            <input class="input" id="profJobTitle" name="job_title" placeholder="Ex.: Médico, Psicólogo">
+          </div>
+          <div class="field">
+            <label for="profRegistry">Registro profissional</label>
+            <input class="input" id="profRegistry" name="registry" placeholder="CRM, CRP...">
+          </div>
+          <div class="row" style="align-items:end;margin-bottom:14px">
+            <button class="btn btn-primary" type="submit" id="profSubmit">Adicionar</button>
+            <button class="btn btn-outline" type="button" id="profCancel" style="display:none"
+              onclick="resetProfForm()">Cancelar edição</button>
+          </div>
+        </form>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="row between">
+          <div>
+            <h3>Profissionais cadastrados</h3>
+            <p class="muted" style="margin-top:-8px">Em "Gerenciar" ficam vínculos com unidades, especialidades, horários
+              de atendimento e bloqueios de agenda.</p>
+          </div>
+          <button class="btn btn-outline btn-sm" type="button" onclick="loadProfessionals()">Atualizar</button>
+        </div>
+        <div id="profList">
+          <div class="spinner"></div>
+        </div>
+        <div id="profDetail" style="display:none"></div>
+      </div>
     </section>
 
     <!-- ===== AUDITORIA ===== -->
@@ -192,6 +262,13 @@
     let diseases = [];
     let editingDiseaseId = null;
     let deletingDiseaseId = null;
+    let professionals = [];
+    let profOffers = [];
+    let profSchedules = [];
+    let profBlocks = [];
+    let editingProfId = null;
+    let activeProfId = null;
+    const WEEK = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
     window.addEventListener('load', async () => {
       SESSION = await requireAuth();
@@ -203,6 +280,9 @@
       document.getElementById('diseaseForm').addEventListener('submit', addDisease);
       document.getElementById('userSearchForm').addEventListener('submit', searchUsers);
       document.getElementById('unitForm').addEventListener('submit', saveUnit);
+      document.getElementById('unitOfferForm').addEventListener('submit', addUnitOffer);
+      document.getElementById('profForm').addEventListener('submit', saveProf);
+      document.getElementById('offerUnitSel').addEventListener('change', renderUnitOffers);
       document.getElementById('auditFilterForm').addEventListener('submit', loadAuditLog);
 
       ensureReagendarModal();
@@ -222,6 +302,8 @@
       });
       document.querySelectorAll('.tabpanel').forEach(p => p.classList.toggle('active', p.id === name));
       if (name === 'auditoria') loadAuditLog();
+      if (name === 'profissionais') loadProfessionals();
+      if (name === 'units') renderUnitOffers();
     }
 
     async function loadHealthUnitsRegions() {
@@ -252,6 +334,8 @@
         const data = await apiGet('/health-units/manage');
         units = Array.isArray(data) ? data : [];
         box.innerHTML = units.length ? units.map(unitRow).join('') : '<div class="empty">Nenhuma unidade cadastrada.</div>';
+        refreshOfferUnitSelect();
+        renderUnitOffers();
       } catch (err) {
         box.innerHTML = `<div class="empty">${esc(err.message || 'Erro ao carregar unidades')}</div>`;
       }
@@ -323,6 +407,284 @@
       } catch (err) {
         toast(err.message || 'Erro ao atualizar unidade', 'error');
       }
+    };
+
+    /* ===== SERVIÇOS OFERTADOS PELA UNIDADE (4.4) ===== */
+    function refreshOfferUnitSelect() {
+      const sel = document.getElementById('offerUnitSel');
+      if (!sel) return;
+      const current = sel.value;
+      sel.innerHTML = units.length
+        ? units.map(u => `<option value="${u.id}">${esc(u.name)}</option>`).join('')
+        : '<option value="">Nenhuma unidade cadastrada</option>';
+      if (current && units.some(u => u.id === current)) sel.value = current;
+    }
+
+    async function renderUnitOffers() {
+      const box = document.getElementById('unitOfferList');
+      if (!box) return;
+      const unitId = document.getElementById('offerUnitSel').value;
+      if (!unitId) { box.innerHTML = '<div class="empty">Cadastre uma unidade para adicionar serviços.</div>'; return; }
+      box.innerHTML = '<div class="spinner"></div>';
+      try {
+        const rows = await apiGet('/health-units/' + encodeURIComponent(unitId) + '/offers');
+        box.innerHTML = rows.length ? rows.map(o => `
+          <div class="item">
+            <div>
+              <h4>${esc(o.name)} <span class="badge">${o.kind === 'exame' ? 'Exame' : 'Consulta'}</span>
+                <span class="badge ${Number(o.active) ? 'badge-success' : 'badge-danger'}">${Number(o.active) ? 'Ativo' : 'Inativo'}</span></h4>
+            </div>
+            <button class="btn btn-outline btn-sm" type="button" onclick="delUnitOffer('${unitId}','${o.id}')">Remover</button>
+          </div>`).join('')
+          : '<div class="empty">Nenhum serviço cadastrado para esta unidade.</div>';
+      } catch (err) {
+        box.innerHTML = `<div class="empty">${esc(err.message || 'Erro ao carregar serviços')}</div>`;
+      }
+    }
+
+    async function addUnitOffer(e) {
+      e.preventDefault();
+      const unitId = document.getElementById('offerUnitSel').value;
+      if (!unitId) { toast('Cadastre uma unidade antes de adicionar serviços', 'error'); return; }
+      const kind = document.getElementById('offerKind').value;
+      const name = document.getElementById('offerName').value.trim();
+      if (!name) { toast('Informe a especialidade ou o exame', 'error'); return; }
+      try {
+        await apiPost('/health-units/' + encodeURIComponent(unitId) + '/offers', { kind, name });
+        document.getElementById('offerName').value = '';
+        toast('Serviço adicionado', 'success');
+        renderUnitOffers();
+      } catch (err) { toast(err.message || 'Erro ao adicionar serviço', 'error'); }
+    }
+
+    window.delUnitOffer = async function (unitId, offerId) {
+      try {
+        await apiDelete('/health-units/' + encodeURIComponent(unitId) + '/offers/' + encodeURIComponent(offerId));
+        toast('Serviço removido', 'success');
+        renderUnitOffers();
+      } catch (err) { toast(err.message || 'Erro ao remover serviço', 'error'); }
+    };
+
+    /* ===== PROFISSIONAIS E AGENDA (4.4 / 4.6) ===== */
+    async function loadProfessionals() {
+      const box = document.getElementById('profList');
+      if (!box) return;
+      box.innerHTML = '<div class="spinner"></div>';
+      try {
+        const data = await apiGet('/admin/professionals');
+        professionals = data.professionals || [];
+        profOffers = data.offers || [];
+        profSchedules = data.schedules || [];
+        profBlocks = data.blocks || [];
+        box.innerHTML = professionals.length
+          ? professionals.map(profRow).join('')
+          : '<div class="empty">Nenhum profissional cadastrado.</div>';
+        if (activeProfId && professionals.some(p => p.id === activeProfId)) openProfDetail(activeProfId);
+        else { activeProfId = null; document.getElementById('profDetail').style.display = 'none'; }
+      } catch (err) {
+        box.innerHTML = `<div class="empty">${esc(err.message || 'Erro ao carregar profissionais')}</div>`;
+      }
+    }
+
+    function profRow(p) {
+      const active = Number(p.active) === 1;
+      const nOffers = profOffers.filter(o => o.professional_id === p.id).length;
+      const nSched = profSchedules.filter(s => s.professional_id === p.id).length;
+      const nBlocks = profBlocks.filter(b => b.professional_id === p.id).length;
+      return `<div class="item">
+        <div>
+          <h4>${esc(p.name)} <span class="badge ${active ? 'badge-success' : 'badge-danger'}">${active ? 'Ativo' : 'Inativo'}</span>
+            ${p.job_title ? `<span class="badge">${esc(p.job_title)}</span>` : ''}</h4>
+          <p class="muted">${p.registry ? 'Registro: ' + esc(p.registry) + ' · ' : ''}${nOffers} vínculo(s) · ${nSched} horário(s) · ${nBlocks} bloqueio(s)</p>
+        </div>
+        <div class="row" style="gap:6px">
+          <button class="btn btn-outline btn-sm" type="button" onclick="openProfDetail('${p.id}')">Gerenciar</button>
+          <button class="btn btn-outline btn-sm" type="button" onclick="editProf('${p.id}')">Editar</button>
+          <button class="btn btn-outline btn-sm" type="button" onclick="toggleProf('${p.id}',${active ? 0 : 1})">${active ? 'Desativar' : 'Ativar'}</button>
+        </div>
+      </div>`;
+    }
+
+    function unitOptions(selected) {
+      return '<option value="">Selecione a unidade...</option>' +
+        units.map(u => `<option value="${u.id}" ${selected === u.id ? 'selected' : ''}>${esc(u.name)}</option>`).join('');
+    }
+
+    window.openProfDetail = function (id) {
+      const p = professionals.find(x => x.id === id);
+      const box = document.getElementById('profDetail');
+      if (!p || !box) return;
+      activeProfId = id;
+      const offers = profOffers.filter(o => o.professional_id === id);
+      const schedules = profSchedules.filter(s => s.professional_id === id);
+      const blocks = profBlocks.filter(b => b.professional_id === id);
+      box.style.display = 'block';
+      box.innerHTML = `<div class="card" style="margin-top:16px">
+      <div class="row between">
+        <h3 style="margin:0">${esc(p.name)} — vínculos e agenda</h3>
+        <button class="btn btn-outline btn-sm" type="button" onclick="closeProfDetail()">Fechar</button>
+      </div>
+
+      <h4 style="margin-top:18px">Vínculos com unidades e serviços</h4>
+      <p class="muted" style="margin-top:-6px;font-size:.85rem">O profissional só aparece para o serviço vinculado naquela unidade.</p>
+      <form id="profOfferForm" class="grid grid-3">
+        <div class="field"><label>Unidade</label><select class="select" name="unit_id" required>${unitOptions('')}</select></div>
+        <div class="field"><label>Tipo</label><select class="select" name="kind"><option value="consulta">Consulta</option><option value="exame">Exame</option></select></div>
+        <div class="field"><label>Especialidade / exame</label><input class="input" name="name" required placeholder="Ex.: Cardiologia"></div>
+        <div class="field"><label>Motivo <span class="muted" style="font:inherit">(opcional)</span></label><input class="input" name="reason" placeholder="Ex.: contratação nova"></div>
+        <div class="field"><label>&nbsp;</label><button class="btn btn-outline" type="submit">Vincular</button></div>
+      </form>
+      <div>${offers.length ? offers.map(o => `
+        <div class="item"><div><h4>${esc(o.name)} <span class="badge">${o.kind === 'exame' ? 'Exame' : 'Consulta'}</span></h4>
+        <p class="muted">${esc(o.unit_name)}</p></div>
+        <button class="btn btn-outline btn-sm" type="button" onclick="delProfOffer('${id}','${o.id}')">Remover</button></div>`).join('')
+          : '<div class="empty">Nenhum vínculo cadastrado.</div>'}</div>
+
+      <h4 style="margin-top:18px">Dias e horários de atendimento</h4>
+      <form id="profScheduleForm" class="grid grid-4">
+        <div class="field"><label>Unidade</label><select class="select" name="unit_id" required>${unitOptions('')}</select></div>
+        <div class="field"><label>Dia da semana</label><select class="select" name="weekday">${WEEK.map((d, i) => `<option value="${i}">${d}</option>`).join('')}</select></div>
+        <div class="field"><label>Início</label><input class="input" type="time" name="start_time" required></div>
+        <div class="field"><label>Fim</label><input class="input" type="time" name="end_time" required></div>
+        <div class="field"><label>Duração (min)</label><input class="input" type="number" name="slot_minutes" value="30" min="5" max="240"></div>
+        <div class="field"><label>Motivo <span class="muted" style="font:inherit">(opcional)</span></label><input class="input" name="reason"></div>
+        <div class="field"><label>&nbsp;</label><button class="btn btn-outline" type="submit">Adicionar horário</button></div>
+      </form>
+      <div>${schedules.length ? schedules.map(s => `
+        <div class="item"><div><h4>${WEEK[Number(s.weekday)] || s.weekday}
+        <span class="badge">${String(s.start_time).slice(0, 5)}–${String(s.end_time).slice(0, 5)}</span>
+        <span class="badge">${Number(s.slot_minutes)} min</span></h4>
+        <p class="muted">${esc(s.unit_name)}</p></div>
+        <button class="btn btn-outline btn-sm" type="button" onclick="delProfSchedule('${id}','${s.id}')">Remover</button></div>`).join('')
+          : '<div class="empty">Nenhum horário cadastrado — o profissional não aparece na agenda.</div>'}</div>
+
+      <h4 style="margin-top:18px">Bloqueios, folgas e intervalos</h4>
+      <form id="profBlockForm" class="grid grid-4">
+        <div class="field"><label>Unidade</label><select class="select" name="unit_id" required>${unitOptions('')}</select></div>
+        <div class="field"><label>Início</label><input class="input" type="datetime-local" name="starts_at" required></div>
+        <div class="field"><label>Fim</label><input class="input" type="datetime-local" name="ends_at" required></div>
+        <div class="field"><label>Motivo <span class="muted" style="font:inherit">(obrigatório na prática)</span></label><input class="input" name="reason" placeholder="Ex.: férias"></div>
+        <div class="field"><label>&nbsp;</label><button class="btn btn-outline" type="submit">Bloquear agenda</button></div>
+      </form>
+      <div>${blocks.length ? blocks.map(b => `
+        <div class="item"><div><h4>${fmtDate(b.starts_at)} → ${fmtDate(b.ends_at)}</h4>
+        <p class="muted">${esc(b.unit_name)}${b.reason ? ' · ' + esc(b.reason) : ''}</p></div>
+        <button class="btn btn-outline btn-sm" type="button" onclick="delProfBlock('${id}','${b.id}')">Remover</button></div>`).join('')
+          : '<div class="empty">Nenhum bloqueio futuro.</div>'}</div>
+    </div>`;
+      document.getElementById('profOfferForm').addEventListener('submit', submitProfOffer);
+      document.getElementById('profScheduleForm').addEventListener('submit', submitProfSchedule);
+      document.getElementById('profBlockForm').addEventListener('submit', submitProfBlock);
+      setDateLimits();
+      box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+
+    window.closeProfDetail = function () {
+      activeProfId = null;
+      const box = document.getElementById('profDetail');
+      if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+    };
+
+    async function submitProfOffer(e) {
+      e.preventDefault();
+      const f = Object.fromEntries(new FormData(e.target));
+      try {
+        await apiPost('/admin/professionals/' + encodeURIComponent(activeProfId) + '/offers', f);
+        toast('Vínculo criado', 'success');
+        await loadProfessionals();
+      } catch (err) { toast(err.message || 'Erro ao criar vínculo', 'error'); }
+    }
+
+    async function submitProfSchedule(e) {
+      e.preventDefault();
+      const f = Object.fromEntries(new FormData(e.target));
+      try {
+        await apiPost('/admin/professionals/' + encodeURIComponent(activeProfId) + '/schedules', f);
+        toast('Horário adicionado', 'success');
+        await loadProfessionals();
+      } catch (err) { toast(err.message || 'Erro ao adicionar horário', 'error'); }
+    }
+
+    async function submitProfBlock(e) {
+      e.preventDefault();
+      const f = Object.fromEntries(new FormData(e.target));
+      try {
+        await apiPost('/admin/professionals/' + encodeURIComponent(activeProfId) + '/blocks', f);
+        toast('Agenda bloqueada no período', 'success');
+        await loadProfessionals();
+      } catch (err) { toast(err.message || 'Erro ao bloquear agenda', 'error'); }
+    }
+
+    window.delProfOffer = async function (profId, offerId) {
+      try {
+        await apiDelete('/admin/professionals/' + encodeURIComponent(profId) + '/offers/' + encodeURIComponent(offerId));
+        toast('Vínculo removido', 'success');
+        await loadProfessionals();
+      } catch (err) { toast(err.message || 'Erro ao remover vínculo', 'error'); }
+    };
+
+    window.delProfSchedule = async function (profId, scheduleId) {
+      try {
+        await apiDelete('/admin/professionals/' + encodeURIComponent(profId) + '/schedules/' + encodeURIComponent(scheduleId));
+        toast('Horário removido', 'success');
+        await loadProfessionals();
+      } catch (err) { toast(err.message || 'Erro ao remover horário', 'error'); }
+    };
+
+    window.delProfBlock = async function (profId, blockId) {
+      try {
+        await apiDelete('/admin/professionals/' + encodeURIComponent(profId) + '/blocks/' + encodeURIComponent(blockId));
+        toast('Bloqueio removido', 'success');
+        await loadProfessionals();
+      } catch (err) { toast(err.message || 'Erro ao remover bloqueio', 'error'); }
+    };
+
+    window.editProf = function (id) {
+      const p = professionals.find(x => x.id === id);
+      if (!p) return;
+      editingProfId = id;
+      document.getElementById('profName').value = p.name || '';
+      document.getElementById('profJobTitle').value = p.job_title || '';
+      document.getElementById('profRegistry').value = p.registry || '';
+      document.getElementById('profFormTitle').textContent = 'Editar profissional';
+      document.getElementById('profSubmit').textContent = 'Salvar alterações';
+      document.getElementById('profCancel').style.display = 'inline-flex';
+      document.getElementById('profForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    window.resetProfForm = function () {
+      editingProfId = null;
+      document.getElementById('profForm').reset();
+      document.getElementById('profFormTitle').textContent = 'Cadastrar profissional';
+      document.getElementById('profSubmit').textContent = 'Adicionar';
+      document.getElementById('profCancel').style.display = 'none';
+    };
+
+    async function saveProf(e) {
+      e.preventDefault();
+      const f = Object.fromEntries(new FormData(e.target));
+      const button = document.getElementById('profSubmit');
+      button.disabled = true;
+      try {
+        if (editingProfId) {
+          await apiPatch('/admin/professionals/' + encodeURIComponent(editingProfId), f);
+          toast('Profissional atualizado', 'success');
+        } else {
+          await apiPost('/admin/professionals', f);
+          toast('Profissional cadastrado', 'success');
+        }
+        resetProfForm();
+        await loadProfessionals();
+      } catch (err) { toast(err.message || 'Erro ao salvar profissional', 'error'); }
+      finally { button.disabled = false; }
+    }
+
+    window.toggleProf = async function (id, active) {
+      try {
+        await apiPatch('/admin/professionals/' + encodeURIComponent(id), { active });
+        toast(active ? 'Profissional ativado' : 'Profissional desativado', 'success');
+        await loadProfessionals();
+      } catch (err) { toast(err.message || 'Erro ao atualizar profissional', 'error'); }
     };
 
     async function loadOverview() {
@@ -525,6 +887,9 @@
         ${row2('Nascimento', u.birth_date ? new Date(u.birth_date).toLocaleDateString('pt-BR') : '—')} ${row2('Gênero', u.gender || '—')}
         ${row2('Tipo sanguíneo', u.blood_type || '—')} ${row2('Cargo', u.job_role || '—')}
         ${row2('Mãe', u.mother_name || '—')} ${row2('Pai', u.father_name || '—')}
+        ${row2('Nome social', u.social_name || '—')} ${row2('CNS (Cartão SUS)', u.cns || '—')}
+        ${row2('Prioridade legal', u.priority || '—')} ${row2('Responsável (menor)', u.guardian_name || '—')}
+        ${row2('Cor / raça', u.race || '—')}
       </div>
       <h4>Documentos protegidos</h4>
       <div class="grid grid-2" style="gap:10px;margin-bottom:16px;font-size:.9rem">

@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../db');
 const { verifyToken, requireStaff } = require('../middleware/auth');
 const { logAction } = require('../utils/audit');
+const { validateBooking, validateScheduleWindow } = require('../utils/booking');
 
 const router = express.Router();
 router.use(verifyToken, requireStaff);
@@ -36,16 +37,20 @@ router.get('/exams', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// Busca pacientes por nome ou e-mail (sem CPF/RG)
+// Busca pacientes por nome ou e-mail (sem CPF/RG).
+// Devolve também contas inativas/pendentes — o painel do atendente exibe
+// um aviso para evitar cadastro duplicado (TAREFAS V3, item 3.2).
 router.get('/patients', async (req, res, next) => {
   try {
     const q = String(req.query.q || '').trim();
     if (!q) return res.json([]);
     const [rows] = await pool.query(
-      `SELECT id, full_name, email, phone, mobile, birth_date, gender, blood_type
-       FROM users WHERE role = 'paciente' AND account_status = 'ativo'
+      `SELECT id, full_name, email, phone, mobile, birth_date, gender, blood_type, account_status
+       FROM users WHERE role = 'paciente'
        AND (full_name LIKE ? OR email LIKE ?)
-       ORDER BY full_name LIMIT 20`,
+       ORDER BY CASE account_status WHEN 'ativo' THEN 0 WHEN 'pendente' THEN 1 ELSE 2 END,
+                full_name
+       LIMIT 20`,
       ['%' + q + '%', '%' + q + '%']
     );
     res.json(rows);
@@ -89,10 +94,33 @@ router.patch('/:kind/:id', async (req, res, next) => {
       updates.push('status=?'); params.push(status); logParts.push(`status -> ${status}`);
     }
     if (scheduled_at) {
+      const windowError = validateScheduleWindow(scheduled_at);
+      if (windowError) return res.status(400).json({ error: windowError });
       updates.push('scheduled_at=?'); params.push(scheduled_at);
       logParts.push(`reagendado para ${scheduled_at}`);
     }
     if (!updates.length) return res.status(400).json({ error: 'Nada para atualizar.' });
+
+    // Se o registro tem profissional vinculado, revalida disponibilidade
+    // (dias/horários, conflito e bloqueios) — item 4.5.
+    if (scheduled_at) {
+      const serviceColumn = entity.entityType === 'appointment' ? 'specialty' : 'exam_type';
+      const [[record]] = await pool.query(
+        `SELECT professional_id, unit_id, ${serviceColumn} AS service_name FROM ${entity.table} WHERE id = ?`,
+        [req.params.id]
+      );
+      if (record && record.professional_id && record.unit_id) {
+        const bookingError = await validateBooking(pool, {
+          kind: entity.entityType === 'appointment' ? 'consulta' : 'exame',
+          unitId: record.unit_id,
+          professionalId: record.professional_id,
+          serviceName: record.service_name,
+          scheduledAt: scheduled_at,
+          excludeId: req.params.id,
+        });
+        if (bookingError) return res.status(409).json({ error: bookingError });
+      }
+    }
 
     params.push(req.params.id);
     const [result] = await pool.query(

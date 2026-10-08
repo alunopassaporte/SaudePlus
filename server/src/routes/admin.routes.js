@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const pool = require('../db');
 const { verifyToken, requireAdmin, requireCapability } = require('../middleware/auth');
 const { logAction } = require('../utils/audit');
+const { validateBooking, validateScheduleWindow } = require('../utils/booking');
 
 const router = express.Router();
 // Toda rota abaixo exige login E papel de admin — é a fronteira de
@@ -16,11 +17,6 @@ const ENTITY_MAP = {
   appointments: { table: 'appointments', entityType: 'appointment' },
   exams: { table: 'exams', entityType: 'exam' },
 };
-
-function validFutureDate(value) {
-  if (!value || !/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$/.test(value)) return false;
-  return new Date(String(value).replace(' ', 'T')).getTime() > Date.now();
-}
 
 router.get('/stats', async (req, res, next) => {
   try {
@@ -121,13 +117,35 @@ router.patch('/:kind/:id', async (req, res, next) => {
       logParts.push(`status -> ${status}`);
     }
     if (scheduled_at) {
-      if (!validFutureDate(scheduled_at)) return res.status(400).json({ error: 'Informe uma data futura válida.' });
+      const windowError = validateScheduleWindow(scheduled_at);
+      if (windowError) return res.status(400).json({ error: windowError });
       updates.push('scheduled_at=?');
       params.push(scheduled_at);
       logParts.push(`reagendado para ${scheduled_at}`);
     }
     if (!updates.length) {
       return res.status(400).json({ error: 'Nada para atualizar.' });
+    }
+
+    // Reagendamento respeita dias/horários do profissional, conflitos e
+    // bloqueios (TAREFAS V3, item 4.5) — validação no servidor.
+    if (scheduled_at) {
+      const serviceColumn = entity.entityType === 'appointment' ? 'specialty' : 'exam_type';
+      const [[record]] = await pool.query(
+        `SELECT professional_id, unit_id, ${serviceColumn} AS service_name FROM ${entity.table} WHERE id = ?`,
+        [req.params.id]
+      );
+      if (record && record.professional_id && record.unit_id) {
+        const bookingError = await validateBooking(pool, {
+          kind: entity.entityType === 'appointment' ? 'consulta' : 'exame',
+          unitId: record.unit_id,
+          professionalId: record.professional_id,
+          serviceName: record.service_name,
+          scheduledAt: scheduled_at,
+          excludeId: req.params.id,
+        });
+        if (bookingError) return res.status(409).json({ error: bookingError });
+      }
     }
 
     params.push(req.params.id);

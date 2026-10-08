@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS users (
     id CHAR(36) NOT NULL PRIMARY KEY,
     -- Autenticação
     full_name VARCHAR(150) NOT NULL,
+    -- Nome social (Portaria nº 1.820/2009) — opcional
+    social_name VARCHAR(150) NULL,
     email VARCHAR(150) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     role ENUM(
@@ -45,6 +47,8 @@ CREATE TABLE IF NOT EXISTS users (
     -- Documentos (visíveis apenas para admin — nunca retornados em rotas de atendente)
     cpf VARCHAR(14) NULL,
     rg VARCHAR(15) NULL,
+    -- Cartão Nacional de Saúde — opcional, 15 dígitos
+    cns VARCHAR(15) NULL,
     -- Perfil pessoal
     birth_date DATE NULL,
     gender ENUM(
@@ -52,6 +56,23 @@ CREATE TABLE IF NOT EXISTS users (
         'feminino',
         'outro',
         'prefiro_nao_informar'
+    ) NULL,
+    -- Prioridade legal de atendimento (Lei 10.048/2000)
+    priority ENUM(
+        'nenhuma',
+        'idoso',
+        'gestante',
+        'pcd',
+        'lactante'
+    ) NULL,
+    -- Cor/raça por autodeclaração (IBGE / Ministério da Saúde)
+    race ENUM(
+        'branca',
+        'preta',
+        'parda',
+        'amarela',
+        'indigena',
+        'nao_informar'
     ) NULL,
     blood_type ENUM(
         'A+',
@@ -65,6 +86,8 @@ CREATE TABLE IF NOT EXISTS users (
     ) NULL,
     mother_name VARCHAR(150) NULL,
     father_name VARCHAR(150) NULL,
+    -- Responsável legal — obrigatório para menores de 18 anos
+    guardian_name VARCHAR(150) NULL,
     -- Endereço
     cep VARCHAR(9) NULL,
     street VARCHAR(180) NULL,
@@ -89,6 +112,8 @@ CREATE TABLE IF NOT EXISTS appointments (
     specialty VARCHAR(120) NOT NULL,
     doctor VARCHAR(120) NULL,
     location VARCHAR(180) NOT NULL,
+    unit_id CHAR(36) NULL,
+    professional_id CHAR(36) NULL,
     scheduled_at DATETIME NOT NULL,
     notes TEXT NULL,
     status ENUM(
@@ -139,6 +164,8 @@ CREATE TABLE IF NOT EXISTS exams (
     user_id CHAR(36) NOT NULL,
     exam_type VARCHAR(60) NOT NULL,
     location VARCHAR(180) NOT NULL,
+    unit_id CHAR(36) NULL,
+    professional_id CHAR(36) NULL,
     scheduled_at DATETIME NOT NULL,
     notes TEXT NULL,
     status ENUM(
@@ -252,4 +279,75 @@ CREATE TABLE IF NOT EXISTS audit_log (
     CONSTRAINT fk_audit_actor FOREIGN KEY (actor_id) REFERENCES users (id) ON DELETE CASCADE,
     INDEX idx_audit_entity (entity_type, entity_id),
     INDEX idx_audit_created (created_at)
+) ENGINE = InnoDB;
+
+-- ---------------------------------------------------------------------
+-- Agenda inteligente (V3) — profissionais vinculados às unidades,
+-- especialidades/tipos de exame oferecidos, horários de atendimento e
+-- bloqueios de agenda. Alimenta os seletores dependentes do paciente e
+-- as regras de disponibilidade validadas no servidor.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS professionals (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    job_title VARCHAR(100) NULL,
+    registry VARCHAR(40) NULL,
+    active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE = InnoDB;
+
+-- O que cada UNIDADE oferece (especialidade de consulta ou tipo de exame)
+CREATE TABLE IF NOT EXISTS unit_offers (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    unit_id CHAR(36) NOT NULL,
+    kind ENUM('consulta', 'exame') NOT NULL,
+    name VARCHAR(120) NOT NULL,
+    active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_unit_offers_unit FOREIGN KEY (unit_id) REFERENCES health_units (id) ON DELETE CASCADE,
+    UNIQUE KEY uq_unit_offer (unit_id, kind, name)
+) ENGINE = InnoDB;
+
+-- O que cada PROFISSIONAL atende, por unidade e tipo
+CREATE TABLE IF NOT EXISTS professional_offers (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    professional_id CHAR(36) NOT NULL,
+    unit_id CHAR(36) NOT NULL,
+    kind ENUM('consulta', 'exame') NOT NULL,
+    name VARCHAR(120) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_prof_offers_prof FOREIGN KEY (professional_id) REFERENCES professionals (id) ON DELETE CASCADE,
+    CONSTRAINT fk_prof_offers_unit FOREIGN KEY (unit_id) REFERENCES health_units (id) ON DELETE CASCADE,
+    UNIQUE KEY uq_prof_offer (professional_id, unit_id, kind, name)
+) ENGINE = InnoDB;
+
+-- Dias/horários de atendimento do profissional na unidade
+-- weekday: 0 = domingo ... 6 = sábado
+CREATE TABLE IF NOT EXISTS work_schedules (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    professional_id CHAR(36) NOT NULL,
+    unit_id CHAR(36) NOT NULL,
+    weekday TINYINT NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    slot_minutes INT NOT NULL DEFAULT 30,
+    active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_sched_prof FOREIGN KEY (professional_id) REFERENCES professionals (id) ON DELETE CASCADE,
+    CONSTRAINT fk_sched_unit FOREIGN KEY (unit_id) REFERENCES health_units (id) ON DELETE CASCADE,
+    UNIQUE KEY uq_sched (professional_id, unit_id, weekday, start_time)
+) ENGINE = InnoDB;
+
+-- Folgas, intervalos e bloqueios pontuais de agenda
+CREATE TABLE IF NOT EXISTS schedule_blocks (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    professional_id CHAR(36) NOT NULL,
+    unit_id CHAR(36) NOT NULL,
+    starts_at DATETIME NOT NULL,
+    ends_at DATETIME NOT NULL,
+    reason VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_block_prof FOREIGN KEY (professional_id) REFERENCES professionals (id) ON DELETE CASCADE,
+    CONSTRAINT fk_block_unit FOREIGN KEY (unit_id) REFERENCES health_units (id) ON DELETE CASCADE,
+    INDEX idx_block_prof (professional_id, starts_at, ends_at)
 ) ENGINE = InnoDB;

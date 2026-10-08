@@ -68,17 +68,33 @@ let pendingReagendar = null;
 
 function formatJobRole(role) {
   if (!role) return '';
+  // Normaliza acentos e caixa para casar com os cargos cadastrados no cadastro
+  const norm = s => s.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
   const map = {
     'recepcionista': 'Recepcionista',
     'tecnico_enfermagem': 'Técnico(a) de Enfermagem',
+    'tecnico de enfermagem': 'Técnico(a) de Enfermagem',
     'enfermeiro': 'Enfermeiro(a)',
+    'enfermeiro(a)': 'Enfermeiro(a)',
+    'enfermeira': 'Enfermeiro(a)',
     'medico': 'Médico(a)',
+    'medico(a)': 'Médico(a)',
+    'motorista': 'Motorista',
+    'auxiliar administrativo': 'Auxiliar Administrativo',
+    'administrativo': 'Auxiliar Administrativo',
     'agente_saude': 'Agente Comunitário de Saúde',
-    'atendente': 'Atendente'
+    'agente de saude': 'Agente Comunitário de Saúde',
+    'agente comunitario de saude': 'Agente Comunitário de Saúde',
+    'atendente': 'Atendente',
+    'psicologo': 'Psicólogo(a)',
+    'psicologo(a)': 'Psicólogo(a)',
+    'dentista': 'Cirurgião(a)-Dentista',
+    'odontologista': 'Cirurgião(a)-Dentista',
   };
-  const key = role.toLowerCase().trim();
+  const key = norm(role);
   if (map[key]) return map[key];
-  return role.charAt(0).toUpperCase() + role.slice(1);
+  // Cargo livre cadastrado pelo admin: só destaca a primeira letra de cada palavra
+  return key.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
 /* ===== MODAL DE REAGENDAMENTO (4.1) ===== */
@@ -119,6 +135,7 @@ window.reagendar = function(kind, id) {
   ensureReagendarModal();
   pendingReagendar = { kind, id };
   const input = document.getElementById('reagendarInputDate');
+  setDateLimits();
   input.min = nowLocalForInput();
   input.value = '';
   document.getElementById('reagendarModal').classList.add('show');
@@ -172,6 +189,7 @@ window.addEventListener('load', async ()=>{
   document.getElementById('patientSearchForm').addEventListener('submit', searchPatient);
 
   ensureReagendarModal();
+  setDateLimits(); // item 3.4 — limita o calendário a hoje + 1 ano
   loadAll();
 });
 

@@ -69,38 +69,48 @@
     <!-- CONSULTAS -->
     <section class="tabpanel" id="consultas" role="tabpanel" aria-labelledby="tab-consultas">
       <div class="card">
+        <p class="edit-banner" id="apptEditBanner" style="display:none">Você está editando este agendamento.</p>
         <h3 id="apptFormTitle">Agendar consulta</h3>
         <form id="apptForm" class="grid grid-2">
-          <div class="field">
-            <label>Especialidade</label>
-            <select class="select" name="specialty" id="specialtySelect" required>
-              <option value="">Selecione...</option>
-              <option>Clínico Geral</option>
-              <option>Pediatria</option>
-              <option>Ginecologia</option>
-              <option>Odontologia</option>
-              <option>Cardiologia</option>
-              <option>Dermatologia</option>
-              <option>Ortopedia</option>
-              <option>Psicologia</option>
-              <option>Psiquiatria</option>
-              <option value="__outra">Outra (especificar)</option>
-            </select>
-            <input class="input" name="specialty_outra" id="specialtyOutra" placeholder="Digite a especialidade"
-              style="display:none;margin-top:8px">
-          </div>
-          <div class="field">
-            <label>Profissional <span class="muted" style="font-weight:400">(opcional)</span></label>
-            <input class="input" name="doctor">
-          </div>
-          <div class="field">
-            <label>Local — Posto de Saúde / PSF</label>
+          <div class="field" style="grid-column:1/-1">
+            <label>Local — Posto de Saúde / PSF *</label>
             <select class="select" name="location" id="apptLocationSelect" required>
               <option value="">Carregando...</option>
             </select>
           </div>
-          <div class="field"><label>Data/hora</label><input class="input" name="scheduled_at" type="datetime-local"
-              required></div>
+          <div class="field">
+            <label>Especialidade *</label>
+            <select class="select" id="specialtySelect">
+              <option value="">Escolha a unidade primeiro</option>
+            </select>
+            <input class="input" name="specialty_outra" id="specialtyOutra" placeholder="Digite a especialidade"
+              style="display:none;margin-top:8px">
+            <small class="help-text" id="apptServiceHelp" style="display:none"></small>
+          </div>
+          <div class="field">
+            <label>Profissional *</label>
+            <select class="select" id="apptDoctorSelect" disabled>
+              <option value="">Escolha a especialidade primeiro</option>
+            </select>
+            <input type="hidden" name="doctor" id="apptDoctorName">
+            <small class="help-text" id="apptDoctorHelp" style="display:none"></small>
+          </div>
+          <div class="field">
+            <label>Dia *</label>
+            <select class="select" id="apptDateSelect" disabled>
+              <option value="">Escolha o profissional primeiro</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Horário *</label>
+            <select class="select" id="apptTimeSelect" disabled>
+              <option value="">Escolha o dia primeiro</option>
+            </select>
+          </div>
+          <div class="field" id="apptManualDateField" style="grid-column:1/-1;display:none">
+            <label>Data/hora *</label>
+            <input class="input" id="apptManualDate" type="datetime-local">
+          </div>
           <div class="field" style="grid-column:1/-1"><label>Observações</label><textarea class="textarea"
               name="notes"></textarea></div>
           <div class="row" style="grid-column:1/-1">
@@ -123,33 +133,48 @@
     <!-- EXAMES -->
     <section class="tabpanel" id="exames" role="tabpanel" aria-labelledby="tab-exames">
       <div class="card">
+        <p class="edit-banner" id="examEditBanner" style="display:none">Você está editando este agendamento.</p>
         <h3 id="examFormTitle">Agendar exame</h3>
         <form id="examForm" class="grid grid-2">
-          <div class="field">
-            <label>Tipo de exame</label>
-            <select class="select" name="exam_type" required>
-              <option value="">Selecione...</option>
-              <option>Laboratoriais (sangue, urina...)</option>
-              <option>Imagem (raio-x, ultrassom...)</option>
-              <option>Cardiológico</option>
-              <option>Oftalmológico</option>
-              <option>Otorrinolaringológico</option>
-              <option>Ginecológico</option>
-              <option>Urológico</option>
-              <option>Neurológico</option>
-              <option value="__outro">Outro (especificar)</option>
-            </select>
-            <input class="input" name="exam_type_outro" id="examTypeOutro" placeholder="Digite o tipo de exame"
-              style="display:none;margin-top:8px">
-          </div>
-          <div class="field">
-            <label>Local</label>
+          <div class="field" style="grid-column:1/-1">
+            <label>Local *</label>
             <select class="select" name="location" id="examLocationSelect" required>
               <option value="">Carregando...</option>
             </select>
           </div>
-          <div class="field" style="grid-column:1/-1"><label>Data/hora</label><input class="input" name="scheduled_at"
-              type="datetime-local" required></div>
+          <div class="field">
+            <label>Tipo de exame *</label>
+            <select class="select" id="examTypeSelect">
+              <option value="">Escolha a unidade primeiro</option>
+            </select>
+            <input class="input" name="exam_type_outro" id="examTypeOutro" placeholder="Digite o tipo de exame"
+              style="display:none;margin-top:8px">
+            <small class="help-text" id="examServiceHelp" style="display:none"></small>
+          </div>
+          <div class="field">
+            <label>Profissional *</label>
+            <select class="select" id="examDoctorSelect" disabled>
+              <option value="">Escolha o tipo de exame primeiro</option>
+            </select>
+            <input type="hidden" name="doctor" id="examDoctorName">
+            <small class="help-text" id="examDoctorHelp" style="display:none"></small>
+          </div>
+          <div class="field">
+            <label>Dia *</label>
+            <select class="select" id="examDateSelect" disabled>
+              <option value="">Escolha o profissional primeiro</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Horário *</label>
+            <select class="select" id="examTimeSelect" disabled>
+              <option value="">Escolha o dia primeiro</option>
+            </select>
+          </div>
+          <div class="field" id="examManualDateField" style="grid-column:1/-1;display:none">
+            <label>Data/hora *</label>
+            <input class="input" id="examManualDate" type="datetime-local">
+          </div>
           <div class="field" style="grid-column:1/-1"><label>Observações</label><textarea class="textarea"
               name="notes"></textarea></div>
           <div class="row" style="grid-column:1/-1">
@@ -187,6 +212,432 @@
     let editingApptId = null;
     let editingExamId = null;
     let pendingCancel = null;
+    let healthUnits = [];
+
+    /* ======================================================================
+       Agenda inteligente — seletores dependentes
+       unidade -> especialidade/tipo -> profissional -> dia -> horário
+       (TAREFAS V3, itens 2.7 e 2.8)
+       ====================================================================== */
+    const KIND_META = {
+      appointments: {
+        kind: 'consulta',
+        list: () => lastAppointments,
+        form: 'apptForm',
+        location: 'apptLocationSelect',
+        service: 'specialtySelect',
+        other: 'specialtyOutra',
+        otherValue: '__outra',
+        serviceHelp: 'apptServiceHelp',
+        doctor: 'apptDoctorSelect',
+        doctorName: 'apptDoctorName',
+        doctorHelp: 'apptDoctorHelp',
+        date: 'apptDateSelect',
+        time: 'apptTimeSelect',
+        manualField: 'apptManualDateField',
+        manual: 'apptManualDate',
+        title: 'apptFormTitle',
+        banner: 'apptEditBanner',
+        cancelBtn: 'apptCancel',
+        cancelEditBtn: 'apptCancelEdit',
+        serviceName: 'a especialidade',
+        customMissing: 'Informe a especialidade.',
+        emptyService: 'Nenhuma especialidade cadastrada nesta unidade. Use "Outra (especificar)" se precisar.',
+        newTitle: 'Agendar consulta',
+        saveLabel: 'Salvar alterações',
+        submitLabel: 'Agendar',
+      },
+      exams: {
+        kind: 'exame',
+        list: () => lastExams,
+        form: 'examForm',
+        location: 'examLocationSelect',
+        service: 'examTypeSelect',
+        other: 'examTypeOutro',
+        otherValue: '__outro',
+        serviceHelp: 'examServiceHelp',
+        doctor: 'examDoctorSelect',
+        doctorName: 'examDoctorName',
+        doctorHelp: 'examDoctorHelp',
+        date: 'examDateSelect',
+        time: 'examTimeSelect',
+        manualField: 'examManualDateField',
+        manual: 'examManualDate',
+        title: 'examFormTitle',
+        banner: 'examEditBanner',
+        cancelBtn: 'examCancel',
+        cancelEditBtn: 'examCancelEdit',
+        serviceName: 'o tipo de exame',
+        customMissing: 'Por favor, informe qual é o exame.',
+        emptyService: 'Nenhum tipo de exame cadastrado nesta unidade. Use "Outro (especificar)" se precisar.',
+        newTitle: 'Agendar exame',
+        saveLabel: 'Salvar alterações',
+        submitLabel: 'Agendar',
+      }
+    };
+
+    const formState = {
+      appointments: { availability: null, customLegacy: false },
+      exams: { availability: null, customLegacy: false }
+    };
+
+    const el = id => document.getElementById(id);
+
+    function esc(s) { return (s ?? '').toString().replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+    function setSelect(selectEl, options, placeholder, disabled) {
+      selectEl.innerHTML = `<option value="">${esc(placeholder)}</option>` +
+        options.map(o => `<option value="${esc(o.value)}">${esc(o.text)}</option>`).join('');
+      selectEl.disabled = !!disabled;
+    }
+
+    function setHelp(id, message) {
+      const help = el(id);
+      if (!help) return;
+      help.textContent = message || '';
+      help.style.display = message ? 'block' : 'none';
+    }
+
+    /* ---- avisos de erro por campo (usados na validação do envio) ---- */
+    function setFieldError(fieldEl, message) {
+      if (!fieldEl) return;
+      fieldEl.classList.add('has-error');
+      let msg = fieldEl.querySelector('.field-msg');
+      if (!msg) { msg = document.createElement('small'); msg.className = 'field-msg'; fieldEl.appendChild(msg); }
+      msg.textContent = message;
+    }
+
+    function clearFieldError(fieldEl) {
+      if (!fieldEl) return;
+      fieldEl.classList.remove('has-error');
+      const msg = fieldEl.querySelector('.field-msg');
+      if (msg) msg.remove();
+    }
+
+    function fieldOf(controlEl) {
+      return controlEl ? controlEl.closest('.field') : null;
+    }
+
+    function showFirstError(controlEl) {
+      if (!controlEl) return;
+      const field = fieldOf(controlEl) || controlEl;
+      field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      try { controlEl.focus({ preventScroll: true }); } catch (e) { try { controlEl.focus(); } catch (e2) { } }
+    }
+
+    function unitIdByName(name) {
+      const unit = healthUnits.find(u => u.name === name);
+      return unit ? unit.id : null;
+    }
+
+    function ensureLocationOption(selectEl, name) {
+      const exists = Array.from(selectEl.options).some(o => o.value === name);
+      if (!exists) {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name + ' (local anterior)';
+        selectEl.appendChild(opt);
+      }
+      selectEl.value = name;
+    }
+
+    function selectedText(selectEl) {
+      return selectEl.selectedIndex >= 0 ? selectEl.options[selectEl.selectedIndex].text : '';
+    }
+
+    function fmtDayLabel(dateStr) {
+      const d = new Date(dateStr + 'T00:00:00');
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+    }
+
+    function resetService(m) {
+      setSelect(el(m.service), [], 'Escolha a unidade primeiro', true);
+      el(m.other).style.display = 'none';
+      el(m.other).value = '';
+      setHelp(m.serviceHelp, '');
+      clearFieldError(fieldOf(el(m.service)));
+      clearFieldError(fieldOf(el(m.other)));
+    }
+
+    function resetDoctor(m) {
+      setSelect(el(m.doctor), [], 'Escolha a especialidade primeiro', true);
+      el(m.doctorName).value = '';
+      setHelp(m.doctorHelp, '');
+      clearFieldError(fieldOf(el(m.doctor)));
+      formState[m === KIND_META.appointments ? 'appointments' : 'exams'].availability = null;
+    }
+
+    function resetDateTime(m) {
+      setSelect(el(m.date), [], 'Escolha o profissional primeiro', true);
+      setSelect(el(m.time), [], 'Escolha o dia primeiro', true);
+      clearFieldError(fieldOf(el(m.date)));
+      clearFieldError(fieldOf(el(m.time)));
+    }
+
+    function showManualDate(m, show) {
+      const field = el(m.manualField);
+      field.style.display = show ? 'block' : 'none';
+      el(m.manual).required = !!show;
+      if (!show) el(m.manual).value = '';
+      clearFieldError(fieldOf(field));
+    }
+
+    // item 2.4 — calendário limitado a hoje + 1 ano em todos os campos
+    function setDateLimits() {
+      const now = new Date();
+      const minDateTime = nowLocalForInput();
+      const maxDateObj = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate(), 23, 59);
+      const maxDateTime = new Date(maxDateObj.getTime() - maxDateObj.getTimezoneOffset() * 60000)
+        .toISOString().slice(0, 16);
+      document.querySelectorAll('input[type="datetime-local"]').forEach(elInput => {
+        elInput.min = minDateTime;
+        elInput.max = maxDateTime;
+      });
+    }
+
+    /* ---------------------- fluxo dos seletores dependentes ---------------------- */
+
+    async function onUnitChange(kindKey) {
+      const m = KIND_META[kindKey];
+      resetService(m);
+      resetDoctor(m);
+      resetDateTime(m);
+      showManualDate(m, false);
+
+      const locationName = el(m.location).value;
+      if (!locationName) {
+        setSelect(el(m.service), [], 'Escolha a unidade primeiro', true);
+        return;
+      }
+      setSelect(el(m.service), [], 'Carregando...', true);
+
+      const unitId = unitIdByName(locationName);
+      if (!unitId) {
+        setSelect(el(m.service), [], 'Unidade indisponível', true);
+        setHelp(m.serviceHelp, 'Esta unidade não está mais ativa. Escolha outra unidade.');
+        return;
+      }
+      try {
+        const names = await apiGet('/catalog/offers?unit_id=' + encodeURIComponent(unitId) + '&kind=' + m.kind);
+        const options = (Array.isArray(names) ? names : []).map(n => ({ value: n, text: n }));
+        options.push({ value: m.otherValue, text: m.kind === 'consulta' ? 'Outra (especificar)' : 'Outro (especificar)' });
+        if (!options.length - 1) { /* sempre fica ao menos a opção "Outra" */ }
+        const placeholder = (Array.isArray(names) && names.length) ? 'Selecione...' : 'Nenhum serviço cadastrado';
+        setSelect(el(m.service), options, placeholder, false);
+        if (!Array.isArray(names) || !names.length) {
+          setHelp(m.serviceHelp, m.emptyService);
+        }
+      } catch (err) {
+        setSelect(el(m.service), [], 'Erro ao carregar', true);
+        setHelp(m.serviceHelp, 'Não foi possível carregar os serviços da unidade. ' + (err.message || ''));
+      }
+    }
+
+    function enterCustomService(m) {
+      // "Outro": o atendimento é alocado pela unidade — sem profissional,
+      // data/hora preenchidas manualmente com limite de 1 ano.
+      el(m.other).style.display = 'block';
+      setSelect(el(m.doctor), [{ value: '', text: 'A definir pela unidade' }], '', false);
+      el(m.doctor).disabled = false;
+      setHelp(m.doctorHelp, '');
+      resetDateTime(m);
+      showManualDate(m, true);
+      setDateLimits();
+    }
+
+    async function onServiceChange(kindKey) {
+      const m = KIND_META[kindKey];
+      const stateKey = kindKey;
+      resetDoctor(m);
+      resetDateTime(m);
+      showManualDate(m, false);
+
+      const service = el(m.service).value;
+      if (!service) return;
+
+      if (service === m.otherValue) {
+        enterCustomService(m);
+        return;
+      }
+
+      el(m.other).style.display = 'none';
+      el(m.other).value = '';
+
+      const unitId = unitIdByName(el(m.location).value);
+      if (!unitId) {
+        setSelect(el(m.doctor), [], 'Unidade indisponível', true);
+        setHelp(m.doctorHelp, 'A unidade escolhida não está mais ativa.');
+        return;
+      }
+      setSelect(el(m.doctor), [], 'Carregando...', true);
+      try {
+        const profs = await apiGet(
+          '/catalog/professionals?unit_id=' + encodeURIComponent(unitId) +
+          '&kind=' + m.kind + '&name=' + encodeURIComponent(service)
+        );
+        if (!Array.isArray(profs) || !profs.length) {
+          setSelect(el(m.doctor), [], 'Nenhum profissional disponível', true);
+          setHelp(m.doctorHelp, 'Nenhum profissional está habilitado para "' + service + '" nesta unidade. Tente outra unidade.');
+          return;
+        }
+        setSelect(el(m.doctor), profs.map(p => ({
+          value: p.id,
+          text: p.name + (p.job_title ? ' · ' + p.job_title : '')
+        })), 'Selecione...', false);
+        setHelp(m.doctorHelp, '');
+      } catch (err) {
+        setSelect(el(m.doctor), [], 'Erro ao carregar', true);
+        setHelp(m.doctorHelp, 'Não foi possível carregar os profissionais. ' + (err.message || ''));
+      }
+      formState[stateKey].availability = null;
+    }
+
+    async function onDoctorChange(kindKey) {
+      const m = KIND_META[kindKey];
+      resetDateTime(m);
+      formState[kindKey].availability = null;
+
+      const professionalId = el(m.doctor).value;
+      if (!professionalId) return;
+
+      const unitId = unitIdByName(el(m.location).value);
+      const service = el(m.service).value;
+      if (!unitId || !service) return;
+
+      setSelect(el(m.date), [], 'Carregando...', true);
+      const excludeId = kindKey === 'appointments' ? editingApptId : editingExamId;
+      try {
+        const params = new URLSearchParams({
+          unit_id: unitId, kind: m.kind, name: service,
+          professional_id: professionalId, days: '30'
+        });
+        if (excludeId) params.set('exclude_id', excludeId);
+        const data = await apiGet('/catalog/availability?' + params.toString());
+        if (!data.days || !data.days.length) {
+          setSelect(el(m.date), [], 'Sem horários disponíveis', true);
+          setHelp(m.doctorHelp, data.reason || 'Nenhum horário livre nos próximos dias.');
+          return;
+        }
+        formState[kindKey].availability = data;
+        setSelect(el(m.date), data.days.map(d => ({ value: d.date, text: fmtDayLabel(d.date) })), 'Selecione o dia...', false);
+        setHelp(m.doctorHelp, '');
+      } catch (err) {
+        setSelect(el(m.date), [], 'Erro ao carregar', true);
+        setHelp(m.doctorHelp, 'Não foi possível carregar os horários. ' + (err.message || ''));
+      }
+    }
+
+    function onDateChange(kindKey) {
+      const m = KIND_META[kindKey];
+      setSelect(el(m.time), [], 'Escolha o dia primeiro', true);
+      const date = el(m.date).value;
+      const availability = formState[kindKey].availability;
+      if (!date || !availability) return;
+      const day = availability.days.find(d => d.date === date);
+      if (!day || !day.slots.length) {
+        setSelect(el(m.time), [], 'Sem horários neste dia', true);
+        return;
+      }
+      setSelect(el(m.time), day.slots.map(s => ({ value: s, text: s })), 'Selecione o horário...', false);
+    }
+
+    /* ---------------------- montagem e validação do envio ---------------------- */
+
+    function validateBookingForm(kindKey) {
+      const m = KIND_META[kindKey];
+      const serviceValue = el(m.service).value;
+      let firstError = null;
+
+      const fail = (control, message) => {
+        const field = fieldOf(control);
+        setFieldError(field, message);
+        if (!firstError) firstError = control;
+      };
+
+      [el(m.location), el(m.service), el(m.other), el(m.doctor), el(m.date), el(m.time), fieldOf(el(m.manual))]
+        .forEach(clearFieldError);
+
+      if (!el(m.location).value) fail(el(m.location), 'Selecione a unidade de saúde.');
+      if (!serviceValue) fail(el(m.service), 'Selecione ' + m.serviceName + '.');
+
+      let serviceName = serviceValue;
+      let isCustom = serviceValue === m.otherValue;
+      if (isCustom) {
+        serviceName = el(m.other).value.trim();
+        if (!serviceName) fail(el(m.other), m.customMissing);
+      }
+
+      let scheduledAt = '';
+      if (isCustom) {
+        if (!el(m.manual).value) fail(el(m.manual), 'Escolha a data e a hora do atendimento.');
+        else scheduledAt = el(m.manual).value.replace('T', ' ');
+      } else {
+        if (serviceValue && !el(m.doctor).value) fail(el(m.doctor), 'Selecione o profissional.');
+        if (!el(m.date).value) fail(el(m.date), 'Escolha o dia.');
+        if (!el(m.time).value) fail(el(m.time), 'Escolha o horário.');
+        if (el(m.date).value && el(m.time).value) scheduledAt = el(m.date).value + ' ' + el(m.time).value + ':00';
+      }
+
+      if (firstError) { showFirstError(firstError); return null; }
+
+      const customLegacy = formState[kindKey].customLegacy && !el(m.location).options.length ? false : false;
+      return {
+        serviceName,
+        location: el(m.location).value,
+        unit_id: isCustom && customLegacy ? null : unitIdByName(el(m.location).value),
+        professional_id: isCustom ? null : el(m.doctor).value,
+        doctor: el(m.doctorName).value || null,
+        scheduled_at: scheduledAt,
+        notes: el(m.form).notes ? el(m.form).notes.value : '',
+        isCustom,
+      };
+    }
+
+    function startEditingUI(kindKey) {
+      const m = KIND_META[kindKey];
+      el(m.form).classList.add('form-editing');
+      el(m.banner).style.display = 'block';
+      el(m.title).textContent = kindKey === 'appointments' ? 'Editar consulta' : 'Editar exame';
+      el(m.form).querySelector('button[type=submit]').textContent = m.saveLabel;
+      el(m.cancelBtn).style.display = 'none';
+      el(m.cancelEditBtn).style.display = 'inline-flex';
+      switchTab(kindKey === 'appointments' ? 'consultas' : 'exames');
+    }
+
+    function stopEditingUI(kindKey, { keepValues } = {}) {
+      const m = KIND_META[kindKey];
+      el(m.form).classList.remove('form-editing');
+      el(m.banner).style.display = 'none';
+      el(m.title).textContent = m.newTitle;
+      el(m.form).querySelector('button[type=submit]').textContent = m.submitLabel;
+      el(m.cancelBtn).style.display = 'inline-flex';
+      el(m.cancelEditBtn).style.display = 'none';
+      if (!keepValues) resetBookingForm(kindKey);
+    }
+
+    function resetBookingForm(kindKey) {
+      const m = KIND_META[kindKey];
+      const form = el(m.form);
+      form.reset();
+      formState[kindKey].availability = null;
+      formState[kindKey].customLegacy = false;
+      if (kindKey === 'appointments') editingApptId = null; else editingExamId = null;
+      setSelect(el(m.location), healthUnits.map(u => ({
+        value: u.name,
+        text: u.name + (u.neighborhood ? ' – ' + u.neighborhood : '')
+      })), healthUnits.length ? 'Selecione...' : 'Nenhuma unidade cadastrada', false);
+      resetService(m);
+      el(m.service).innerHTML = '<option value="">Escolha a unidade primeiro</option>';
+      el(m.service).disabled = true;
+      resetDoctor(m);
+      el(m.doctor).innerHTML = '<option value="">Escolha a especialidade primeiro</option>';
+      resetDateTime(m);
+      showManualDate(m, false);
+      [fieldOf(el(m.location)), fieldOf(el(m.service)), fieldOf(el(m.other)),
+      fieldOf(el(m.doctor)), fieldOf(el(m.date)), fieldOf(el(m.time)), fieldOf(el(m.manual))]
+        .forEach(clearFieldError);
+    }
 
     window.addEventListener('load', async () => {
       try {
@@ -203,11 +654,18 @@
         );
         document.getElementById('apptForm').addEventListener('submit', addAppt);
         document.getElementById('examForm').addEventListener('submit', addExam);
-        document.getElementById('specialtySelect').addEventListener('change', toggleSpecialtyOutra);
-        document.querySelector('#examForm [name="exam_type"]').addEventListener('change', toggleExamTypeOutro);
 
-        const minDateTime = nowLocalForInput();
-        document.querySelectorAll('[name=scheduled_at]').forEach(el => el.min = minDateTime);
+        // Seletores dependentes (itens 2.7 / 2.8)
+        el('apptLocationSelect').addEventListener('change', () => onUnitChange('appointments'));
+        el('examLocationSelect').addEventListener('change', () => onUnitChange('exams'));
+        el('specialtySelect').addEventListener('change', () => onServiceChange('appointments'));
+        el('examTypeSelect').addEventListener('change', () => onServiceChange('exams'));
+        el('apptDoctorSelect').addEventListener('change', () => onDoctorChange('appointments'));
+        el('examDoctorSelect').addEventListener('change', () => onDoctorChange('exams'));
+        el('apptDateSelect').addEventListener('change', () => onDateChange('appointments'));
+        el('examDateSelect').addEventListener('change', () => onDateChange('exams'));
+
+        setDateLimits(); // item 2.4 — limite de 1 ano ativo em todos os campos
 
         await loadHealthUnits();
         await loadAll();
@@ -235,40 +693,20 @@
     function toDatetimeLocalValue(s) { return s ? s.replace(' ', 'T').slice(0, 16) : ''; }
     function isOverdue(at, status) { return new Date(at) < new Date() && status === 'pendente'; }
 
-    function toggleSpecialtyOutra() {
-      const isOutra = document.getElementById('specialtySelect').value === '__outra';
-      const inp = document.getElementById('specialtyOutra');
-      inp.style.display = isOutra ? 'block' : 'none';
-      inp.required = isOutra;
-      if (!isOutra) inp.value = '';
-    }
-
-    function toggleExamTypeOutro() {
-      const isOutro = document.querySelector('#examForm [name="exam_type"]').value === '__outro';
-      const inp = document.getElementById('examTypeOutro');
-      inp.style.display = isOutro ? 'block' : 'none';
-      inp.required = isOutro;
-      if (!isOutro) inp.value = '';
-    }
-
     async function loadHealthUnits() {
-      const selects = [
-        document.getElementById('apptLocationSelect'),
-        document.getElementById('examLocationSelect')
-      ];
+      const selects = [el('apptLocationSelect'), el('examLocationSelect')];
       selects.forEach(s => { if (s) s.innerHTML = '<option value="">Carregando...</option>'; });
 
       try {
         const units = await apiGet('/health-units');
-        const rows = Array.isArray(units) ? units : [];
-        if (!rows.length) {
+        healthUnits = Array.isArray(units) ? units : [];
+        if (!healthUnits.length) {
           selects.forEach(s => { if (s) s.innerHTML = '<option value="">Nenhuma unidade cadastrada</option>'; });
           return;
         }
-        const opts = '<option value="">Selecione...</option>' + rows.map(u => {
-          const name = u.name || '';
+        const opts = '<option value="">Selecione...</option>' + healthUnits.map(u => {
           const neighborhood = u.neighborhood ? ' – ' + u.neighborhood : '';
-          return `<option value="${esc(name)}">${esc(name)}${esc(neighborhood)}</option>`;
+          return `<option value="${esc(u.name)}">${esc(u.name)}${esc(neighborhood)}</option>`;
         }).join('');
         selects.forEach(s => { if (s) s.innerHTML = opts; });
       } catch (err) {
@@ -316,8 +754,8 @@
           : '<div class="empty">Nenhum lembrete no momento.</div>';
 
         const allItems = [
-          ...A.map(r => ({ ...r, _type: 'Consulta', _title: r.specialty, _sub: r.location })),
-          ...E.map(r => ({ ...r, _type: 'Exame', _title: r.exam_type, _sub: r.location }))
+          ...A.map(r => ({ ...r, _type: 'Consulta', _title: r.specialty, _sub: r.location, _kind: 'appointments' })),
+          ...E.map(r => ({ ...r, _type: 'Exame', _title: r.exam_type, _sub: r.location, _kind: 'exams' }))
         ].sort((a, b) => new Date(b.scheduled_at) - new Date(a.scheduled_at));
 
         document.getElementById('allScheduled').innerHTML = allItems.length
@@ -325,7 +763,10 @@
           <h4><span class="badge" style="margin-right:6px">${esc(r._type)}</span>${esc(r._title)}</h4>
           <p>${esc(r._sub)} · <span class="badge ${statusClass(r.status)}">${esc(r.status)}</span>
           ${isOverdue(r.scheduled_at, r.status) ? ' <span class="badge badge-warning">atrasado</span>' : ''}</p>
-        </div><span class="muted">${fmtDate(r.scheduled_at)}</span></div>`).join('')
+        </div><div class="row">
+          <span class="muted">${fmtDate(r.scheduled_at)}</span>
+          ${r.status === 'cancelado' ? `<button class="btn btn-outline btn-sm" onclick="rebookItem('${r._kind}','${esc(r.id)}')">Tentar agendar novamente</button>` : ''}
+        </div></div>`).join('')
           : '<div class="empty">Nenhum agendamento encontrado.</div>';
 
         renderList('appts', A,
@@ -350,15 +791,17 @@
     }
 
     function renderList(id, rows, title, right, kind, editFn) {
-      const el = document.getElementById(id);
-      if (!rows.length) { el.innerHTML = '<div class="empty">Nenhum registro.</div>'; return; }
-      el.innerHTML = rows.map(r => {
+      const elList = document.getElementById(id);
+      if (!rows.length) { elList.innerHTML = '<div class="empty">Nenhum registro.</div>'; return; }
+      elList.innerHTML = rows.map(r => {
         const canEdit = editFn && (r.status === 'pendente' || r.status === 'confirmado');
         const canCancel = r.status === 'pendente' || r.status === 'confirmado';
+        const canRebook = r.status === 'cancelado'; // item 2.6
         return `<div class="item"><div>${title(r)}</div><div class="row">
       <span class="muted">${right(r)}</span>
       ${canEdit ? `<button class="btn btn-outline btn-sm" onclick="${editFn}('${esc(r.id)}')">Editar</button>` : ''}
       ${canCancel ? `<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="cancelItem('${kind}','${esc(r.id)}','${esc(r._type || '')}')">Cancelar</button>` : ''}
+      ${canRebook ? `<button class="btn btn-outline btn-sm" onclick="rebookItem('${kind}','${esc(r.id)}')">Tentar agendar novamente</button>` : ''}
     </div></div>`;
       }).join('');
     }
@@ -399,56 +842,203 @@
       finally { b.disabled = false; b.textContent = 'Sim, cancelar'; }
     }
 
-    window.editAppt = function (id) {
-      const a = lastAppointments.find(x => x.id === id); if (!a) return;
-      editingApptId = id; const form = document.getElementById('apptForm'), sel = document.getElementById('specialtySelect');
-      const known = Array.from(sel.options).some(o => o.value === a.specialty);
-      if (known) { sel.value = a.specialty; toggleSpecialtyOutra(); } else { sel.value = '__outra'; toggleSpecialtyOutra(); document.getElementById('specialtyOutra').value = a.specialty; }
-      form.doctor.value = a.doctor || ''; form.location.value = a.location; form.scheduled_at.value = toDatetimeLocalValue(a.scheduled_at); form.notes.value = a.notes || '';
-      document.getElementById('apptFormTitle').textContent = 'Editar consulta'; form.querySelector('button[type=submit]').textContent = 'Salvar alterações';
-      document.getElementById('apptCancel').style.display = 'none'; document.getElementById('apptCancelEdit').style.display = 'inline-flex';
-      switchTab('consultas'); form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
-    window.cancelEditAppt = function () { editingApptId = null; const f = document.getElementById('apptForm'); f.reset(); toggleSpecialtyOutra(); document.getElementById('apptFormTitle').textContent = 'Agendar consulta'; f.querySelector('button[type=submit]').textContent = 'Agendar'; document.getElementById('apptCancel').style.display = 'inline-flex'; document.getElementById('apptCancelEdit').style.display = 'none'; };
-    window.clearApptForm = function () { if (editingApptId) { cancelEditAppt(); return; } const f = document.getElementById('apptForm'); f.reset(); toggleSpecialtyOutra(); };
+    /* ---------------------- abrir formulário para editar / reagendar ---------------------- */
 
-    window.editExam = function (id) {
-      const e = lastExams.find(x => x.id === id); if (!e) return;
-      editingExamId = id; const f = document.getElementById('examForm'), sel = f.exam_type;
-      const known = Array.from(sel.options).some(o => o.value === e.exam_type);
-      if (known) { sel.value = e.exam_type; toggleExamTypeOutro(); } else { sel.value = '__outro'; toggleExamTypeOutro(); document.getElementById('examTypeOutro').value = e.exam_type || ''; }
-      f.location.value = e.location; f.scheduled_at.value = toDatetimeLocalValue(e.scheduled_at); f.notes.value = e.notes || '';
-      document.getElementById('examFormTitle').textContent = 'Editar exame'; f.querySelector('button[type=submit]').textContent = 'Salvar alterações';
-      document.getElementById('examCancel').style.display = 'none'; document.getElementById('examCancelEdit').style.display = 'inline-flex';
-      switchTab('exames'); f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    async function openBookingForm(kindKey, record, { rebook } = {}) {
+      const m = KIND_META[kindKey];
+      // limpa qualquer edição anterior mantendo as unidades carregadas
+      resetBookingForm(kindKey);
+
+      if (rebook) {
+        toast('Escolha uma nova data e horário para concluir o agendamento.', 'success');
+      } else {
+        if (kindKey === 'appointments') editingApptId = record.id; else editingExamId = record.id;
+        startEditingUI(kindKey);
+      }
+
+      // 1) local
+      ensureLocationOption(el(m.location), record.location || '');
+
+      // 2) registros antigos (sem unit_id) entram pelo caminho "Outro",
+      //    preservando especialidade/local em texto livre.
+      const hasUnit = !!record.unit_id && !!unitIdByName(record.location || '');
+      if (!hasUnit) {
+        formState[kindKey].customLegacy = true;
+        setSelect(el(m.service), [{ value: m.otherValue, text: 'Outro (especificar)' }], '', false);
+        el(m.service).value = m.otherValue;
+        enterCustomService(m);
+        el(m.other).value = kindKey === 'appointments' ? (record.specialty || '') : (record.exam_type || '');
+        el(m.doctorName).value = record.doctor || '';
+        if (!rebook) el(m.manual).value = toDatetimeLocalValue(record.scheduled_at);
+        if (rebook) { el(m.location).focus(); }
+        el(m.form).scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+
+      formState[kindKey].customLegacy = false;
+      await onUnitChange(kindKey);
+      el(m.location).value = record.location;
+
+      const offers = await (async () => {
+        try {
+          return await apiGet('/catalog/offers?unit_id=' + encodeURIComponent(record.unit_id) + '&kind=' + m.kind);
+        } catch (e) { return []; }
+      })();
+      const serviceName = kindKey === 'appointments' ? record.specialty : record.exam_type;
+      const known = Array.isArray(offers) && offers.includes(serviceName) && record.professional_id;
+
+      if (!known) {
+        // serviço fora da oferta atual da unidade ou sem profissional vinculado
+        if (Array.isArray(offers) && offers.includes(serviceName) && !record.professional_id) {
+          // registro com serviço conhecido mas alocado sem profissional: mantém texto
+          formState[kindKey].customLegacy = true;
+          setSelect(el(m.service), (offers || []).map(n => ({ value: n, text: n }))
+            .concat([{ value: m.otherValue, text: 'Outro (especificar)' }]), 'Selecione...', false);
+          el(m.service).value = m.otherValue;
+          enterCustomService(m);
+          el(m.other).value = serviceName;
+        } else {
+          formState[kindKey].customLegacy = true;
+          setSelect(el(m.service), [{ value: m.otherValue, text: 'Outro (especificar)' }], '', false);
+          el(m.service).value = m.otherValue;
+          enterCustomService(m);
+          el(m.other).value = serviceName;
+        }
+        el(m.doctorName).value = record.doctor || '';
+        if (!rebook) el(m.manual).value = toDatetimeLocalValue(record.scheduled_at);
+        el(m.form).scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+
+      // caminho guiado: unidade -> serviço -> profissional -> dia -> horário
+      el(m.service).value = serviceName;
+      await onServiceChange(kindKey);
+      el(m.doctor).value = record.professional_id;
+      el(m.doctorName).value = record.doctor || '';
+      await onDoctorChange(kindKey);
+
+      if (!rebook) {
+        const datePart = (record.scheduled_at || '').slice(0, 10);
+        const timePart = (record.scheduled_at || '').slice(11, 16);
+        if (el(m.date).value !== datePart && Array.from(el(m.date).options).some(o => o.value === datePart)) {
+          el(m.date).value = datePart;
+        }
+        if (el(m.date).value) {
+          onDateChange(kindKey);
+          if (Array.from(el(m.time).options).some(o => o.value === timePart)) el(m.time).value = timePart;
+        }
+      }
+      el(m.form).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    window.editAppt = function (id) {
+      const record = lastAppointments.find(x => x.id === id);
+      if (record) openBookingForm('appointments', record, { rebook: false });
     };
-    window.cancelEditExam = function () { editingExamId = null; const f = document.getElementById('examForm'); f.reset(); toggleExamTypeOutro(); document.getElementById('examFormTitle').textContent = 'Agendar exame'; f.querySelector('button[type=submit]').textContent = 'Agendar'; document.getElementById('examCancel').style.display = 'inline-flex'; document.getElementById('examCancelEdit').style.display = 'none'; };
-    window.clearExamForm = function () { if (editingExamId) { cancelEditExam(); return; } const f = document.getElementById('examForm'); f.reset(); toggleExamTypeOutro(); };
+    window.editExam = function (id) {
+      const record = lastExams.find(x => x.id === id);
+      if (record) openBookingForm('exams', record, { rebook: false });
+    };
+
+    // item 2.6 — reagendar itens cancelados com o formulário pré-preenchido
+    window.rebookItem = function (kind, id) {
+      const list = kind === 'appointments' ? lastAppointments : lastExams;
+      const record = list.find(x => x.id === id);
+      if (record) openBookingForm(kind, record, { rebook: true });
+    };
+
+    window.cancelEditAppt = function () { stopEditingUI('appointments'); };
+    window.cancelEditExam = function () { stopEditingUI('exams'); };
+    window.clearApptForm = function () {
+      if (editingApptId) { stopEditingUI('appointments'); return; }
+      resetBookingForm('appointments');
+    };
+    window.clearExamForm = function () {
+      if (editingExamId) { stopEditingUI('exams'); return; }
+      resetBookingForm('exams');
+    };
+
+    /* ---------------------- envio ---------------------- */
 
     async function addAppt(e) {
-      e.preventDefault(); const f = e.target, b = f.querySelector('button[type=submit]'); if (b.disabled) return;
-      const data = Object.fromEntries(new FormData(f)); if (data.specialty === '__outra') data.specialty = (data.specialty_outra || '').trim(); delete data.specialty_outra;
-      if (!data.specialty) { toast('Informe a especialidade.', 'error'); return; }
-      b.disabled = true; const old = b.textContent; b.textContent = 'Enviando...';
-      try { if (editingApptId) { await apiPut('/me/appointments/' + encodeURIComponent(editingApptId), { ...data }); toast('Consulta atualizada', 'success'); cancelEditAppt(); } else { await apiPost('/me/appointments', { ...data }); f.reset(); toggleSpecialtyOutra(); toast('Consulta agendada', 'success'); } await loadAll(); }
-      catch (err) { toast(err.message || 'Erro ao agendar consulta', 'error'); }
-      finally { b.disabled = false; if (!editingApptId) b.textContent = old; }
+      e.preventDefault();
+      const form = e.target;
+      const btn = form.querySelector('button[type=submit]');
+      if (btn.disabled) return;
+
+      const payload = validateBookingForm('appointments');
+      if (!payload) return;
+
+      const data = {
+        specialty: payload.serviceName,
+        doctor: payload.doctor,
+        location: payload.location,
+        scheduled_at: payload.scheduled_at,
+        notes: payload.notes,
+        unit_id: payload.unit_id,
+        professional_id: payload.professional_id || null,
+      };
+
+      btn.disabled = true; const old = btn.textContent; btn.textContent = 'Enviando...';
+      try {
+        if (editingApptId) {
+          await apiPut('/me/appointments/' + encodeURIComponent(editingApptId), data);
+          toast('Consulta atualizada', 'success');
+          stopEditingUI('appointments');
+        } else {
+          await apiPost('/me/appointments', data);
+          resetBookingForm('appointments');
+          toast('Consulta agendada', 'success');
+        }
+        await loadAll();
+      } catch (err) {
+        toast(err.message || 'Erro ao agendar consulta', 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = old;
+      }
     }
 
     async function addExam(e) {
-      e.preventDefault(); const f = e.target, b = f.querySelector('button[type=submit]'); if (b.disabled) return;
-      const data = Object.fromEntries(new FormData(f)); if (data.exam_type === '__outro') data.exam_type = (data.exam_type_outro || '').trim(); delete data.exam_type_outro;
-      if (!data.exam_type) { toast('Informe o tipo de exame.', 'error'); return; }
-      b.disabled = true; const old = b.textContent; b.textContent = 'Enviando...';
-      try { if (editingExamId) { await apiPut('/me/exams/' + encodeURIComponent(editingExamId), { ...data }); toast('Exame atualizado', 'success'); cancelEditExam(); } else { await apiPost('/me/exams', { ...data }); f.reset(); toggleExamTypeOutro(); toast('Exame agendado', 'success'); } await loadAll(); }
-      catch (err) { toast(err.message || 'Erro ao agendar exame', 'error'); }
-      finally { b.disabled = false; if (!editingExamId) b.textContent = old; }
+      e.preventDefault();
+      const form = e.target;
+      const btn = form.querySelector('button[type=submit]');
+      if (btn.disabled) return;
+
+      const payload = validateBookingForm('exams');
+      if (!payload) return;
+
+      const data = {
+        exam_type: payload.serviceName,
+        location: payload.location,
+        scheduled_at: payload.scheduled_at,
+        notes: payload.notes,
+        unit_id: payload.unit_id,
+        professional_id: payload.professional_id || null,
+        doctor: payload.doctor,
+      };
+
+      btn.disabled = true; const old = btn.textContent; btn.textContent = 'Enviando...';
+      try {
+        if (editingExamId) {
+          await apiPut('/me/exams/' + encodeURIComponent(editingExamId), data);
+          toast('Exame atualizado', 'success');
+          stopEditingUI('exams');
+        } else {
+          await apiPost('/me/exams', data);
+          resetBookingForm('exams');
+          toast('Exame agendado', 'success');
+        }
+        await loadAll();
+      } catch (err) {
+        toast(err.message || 'Erro ao agendar exame', 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = old;
+      }
     }
 
     function statusClass(s) { return s === 'cancelado' ? 'badge-danger' : s === 'concluido' ? 'badge-success' : s === 'pendente' ? 'badge-warning' : ''; }
     function stat(label, value) { return `<div class="card"><p class="muted" style="margin:0;font-size:.8rem;text-transform:uppercase">${esc(label)}</p><h2 style="margin:.2em 0 0;font-size:2rem">${value}</h2></div>`; }
     function levelClass(l) { return l === 'alto' ? 'badge-danger' : l === 'medio' ? 'badge-warning' : 'badge-success'; }
-    function esc(s) { return (s ?? '').toString().replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
     document.querySelectorAll('.tabs').forEach(tabContainer => {
       const tabs = Array.from(tabContainer.querySelectorAll('.tab'));
@@ -468,66 +1058,6 @@
         });
       });
     });
-
-    function setDateLimits() {
-      const now = new Date();
-      const minDateTime = nowLocalForInput();
-
-      const maxDateObj = new Date();
-      maxDateObj.setFullYear(now.getFullYear() + 1);
-      const maxDateTime = new Date(maxDateObj - maxDateObj.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-
-      document.querySelectorAll('input[type="datetime-local"]').forEach(el => {
-        el.min = minDateTime;
-        el.max = maxDateTime;
-      });
-    }
-
-    window.editAppt = function (id) {
-      const a = lastAppointments.find(x => x.id === id);
-      if (!a) return;
-      editingApptId = id;
-
-      const form = document.getElementById('apptForm');
-      if (form) form.classList.add('form-editing');
-
-      const sel = document.getElementById('specialtySelect');
-      const known = Array.from(sel.options).some(o => o.value === a.specialty);
-
-      if (known) {
-        sel.value = a.specialty;
-        toggleSpecialtyOutra();
-      } else {
-        sel.value = '__outra';
-        toggleSpecialtyOutra();
-        document.getElementById('specialtyOutra').value = a.specialty;
-      }
-
-      form.doctor.value = a.doctor || '';
-      form.location.value = a.location;
-      form.scheduled_at.value = toDatetimeLocalValue(a.scheduled_at);
-      form.notes.value = a.notes || '';
-
-      document.getElementById('apptFormTitle').textContent = 'Editar consulta';
-      form.querySelector('button[type=submit]').textContent = 'Salvar alterações';
-      document.getElementById('apptCancel').style.display = 'none';
-      document.getElementById('apptCancelEdit').style.display = 'inline-flex';
-
-      switchTab('consultas');
-      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
-
-    window.cancelEditAppt = function () {
-      editingApptId = null;
-      const f = document.getElementById('apptForm');
-      if (f) f.classList.remove('form-editing');
-      f.reset();
-      toggleSpecialtyOutra();
-      document.getElementById('apptFormTitle').textContent = 'Agendar consulta';
-      f.querySelector('button[type=submit]').textContent = 'Agendar';
-      document.getElementById('apptCancel').style.display = 'inline-flex';
-      document.getElementById('apptCancelEdit').style.display = 'none';
-    };
 
     ensureCancelModal();
   </script>

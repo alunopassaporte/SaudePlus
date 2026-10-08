@@ -83,4 +83,55 @@ router.patch('/:id', verifyToken, requireAdmin, async (req, res, next) => {
   }
 });
 
+// ---------------------------------------------------------------------
+// Ofertas da unidade (especialidades de consulta e tipos de exame).
+// Fonte da verdade do que a unidade realmente atende — alimenta os
+// seletores dependentes do paciente (TAREFAS V3, itens 4.4 e 2.7).
+// ---------------------------------------------------------------------
+const OFFER_KINDS = ['consulta', 'exame'];
+
+router.get('/:id/offers', verifyToken, requireAdmin, async (req, res, next) => {
+  try {
+    const [rows] = await pool.query(
+      'SELECT id, kind, name, active FROM unit_offers WHERE unit_id = ? ORDER BY kind, name',
+      [req.params.id]
+    );
+    res.json(rows);
+  } catch (err) { next(err); }
+});
+
+router.post('/:id/offers', verifyToken, requireAdmin, async (req, res, next) => {
+  try {
+    const { kind, name } = req.body || {};
+    if (!OFFER_KINDS.includes(kind)) return res.status(400).json({ error: 'Tipo inválido (consulta ou exame).' });
+    const serviceName = String(name || '').trim();
+    if (!serviceName) return res.status(400).json({ error: 'Informe a especialidade ou tipo de exame.' });
+    const [[unit]] = await pool.query('SELECT id, name FROM health_units WHERE id = ?', [req.params.id]);
+    if (!unit) return res.status(404).json({ error: 'Unidade não encontrada.' });
+
+    const id = crypto.randomUUID();
+    await pool.query(
+      'INSERT IGNORE INTO unit_offers (id, unit_id, kind, name) VALUES (?,?,?,?)',
+      [id, req.params.id, kind, serviceName]
+    );
+    await logAction(req.user.id, 'create', 'unit_offer', id,
+      `${serviceName} (${kind}) em ${unit.name}`);
+    res.status(201).json({ id });
+  } catch (err) { next(err); }
+});
+
+router.delete('/:id/offers/:offerId', verifyToken, requireAdmin, async (req, res, next) => {
+  try {
+    const [[offer]] = await pool.query(
+      'SELECT id, kind, name FROM unit_offers WHERE id = ? AND unit_id = ?',
+      [req.params.offerId, req.params.id]
+    );
+    if (!offer) return res.status(404).json({ error: 'Oferta não encontrada.' });
+    await pool.query('DELETE FROM unit_offers WHERE id = ?', [req.params.offerId]);
+    await logAction(req.user.id, 'delete', 'unit_offer', req.params.offerId,
+      `${offer.name} (${offer.kind}) removida da unidade`);
+    res.status(204).end();
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

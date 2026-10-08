@@ -12,6 +12,9 @@ const adminUsersRoutes = require('./routes/admin.users.routes');
 const examsRoutes = require('./routes/exams.routes');
 const unitsRoutes = require('./routes/units.routes');
 const staffRoutes = require('./routes/staff.routes');
+const catalogRoutes = require('./routes/catalog.routes');
+const adminProfessionalsRoutes = require('./routes/admin.professionals.routes');
+const publicRoutes = require('./routes/public.routes');
 
 const app = express();
 
@@ -27,8 +30,13 @@ app.use('/me/reminders', remindersRoutes);
 app.use('/diseases', diseasesRoutes);
 app.use('/health-units', unitsRoutes);
 app.use('/staff', staffRoutes);
+app.use('/catalog', catalogRoutes);
 app.use('/admin/users', adminUsersRoutes);
+// Antes de /admin: o router genérico tem PATCH /:kind/:id que casaria com
+// /admin/professionals/:id e devolveria 404.
+app.use('/admin/professionals', adminProfessionalsRoutes);
 app.use('/admin', adminRoutes);
+app.use('/public', publicRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Rota não encontrada.' });
